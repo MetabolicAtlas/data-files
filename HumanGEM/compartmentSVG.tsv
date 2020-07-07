@@ -1,0 +1,15 @@
+# compartment name must exist in the model
+# filename must be a .svg with only [a-zA-Z0-9_] characters
+
+@compartment name	Map name	filename
+Peroxisome	Peroxisome	peroxisome.svg
+Mitochondria	Mitochondria	mitochondria.svg
+Lysosome	Lysosome	lysosome.svg
+Endoplasmic reticulum	Endoplasmic reticulum	endoplasmic_reticulum.svg
+Golgi apparatus	Golgi apparatus	golgi_apparatus.svg
+Nucleus	Nucleus	nucleus.svg
+Cytosol	Cytosol (part1)	cytosol_1.svg
+Cytosol	Cytosol (part2)	cytosol_2.svg
+Cytosol	Cytosol (part3)	cytosol_3.svg
+Cytosol	Cytosol (part4)	cytosol_4.svg
+Cytosol	Cytosol (part5)	cytosol_5.svg
