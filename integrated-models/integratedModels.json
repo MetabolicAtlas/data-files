@@ -64,7 +64,7 @@
       },
       {
         "given_name": "Pınar",
-        "family_name": " Kocabaş",
+        "family_name": "Kocabaş",
         "email": "kocabas@chalmers.se",
         "organization": ""
       }
@@ -89,7 +89,42 @@
     "short_name": "Mouse-GEM",
     "full_name": "Generic genome-scale metabolic model of Mus musculus",
     "description": "Mouse genome-scale metabolic models are important tools for the study of mouse and human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the first version of Mouse-GEM, which is a genome-scale model of the generic mouse cell. The objective of Mouse-GEM is to serve as a community model for enabling integrative and mechanistic studies of mouse and human metabolism.",
-    "version": "1.0.0",
+    "version": "0.1.0",
+    "link": "",
+    "chat_link": "",
+    "authors": [
+      {
+        "given_name": "Hao",
+        "family_name": "Wang",
+        "email": "hao.wang@chalmers.se",
+        "organization": ""
+      },
+      {
+        "given_name": "Pınar",
+        "family_name": "Kocabaş",
+        "email": "kocabas@chalmers.se",
+        "organization": ""
+      }
+    ],
+    "condition": "Generic metabolism",
+    "date": "2020-10-21",
+    "sample": {
+      "organism": "Mus musculus",
+      "organ_system": null,
+      "tissue": null,
+      "cell_type": "Generic cell",
+      "cell_line": null
+    },
+    "ref": [],
+    "metabolite_count": 4158,
+    "gene_count": 3505,
+    "reaction_count": 13397
+  },
+  {
+    "short_name": "Rat-GEM",
+    "full_name": "Generic genome-scale metabolic model of Rattus norvegicus",
+    "description": "Rat genome-scale metabolic models are important tools for the study of rat and human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the first version of Rat-GEM, which is a genome-scale model of the generic rat cell. The objective of Rat-GEM is to serve as a community model for enabling integrative and mechanistic studies of rat and human metabolism.",
+    "version": "0.1.0",
     "link": "",
     "chat_link": "",
     "authors": [
@@ -107,9 +142,9 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2020-03-19",
+    "date": "2020-10-21",
     "sample": {
-      "organism": "Mus musculus",
+      "organism": "Rattus norvegicus",
       "organ_system": null,
       "tissue": null,
       "cell_type": "Generic cell",
