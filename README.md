@@ -1,7 +1,10 @@
 #### Data files for [MetabolicAtlas.org](https://metabolicatlas.org)
 
+This repository relies on [Git LFS](https://git-lfs.github.com/). It is recommended that Git LFS is installed before cloning this repository.
+
 This repository centralizes data hosted in other repositories to facilitate the deployment of Metabolic Atlas. The long-term vision is to automate the deployment process by fetching the files directly, which would circumvent the need to duplicate files from these respositories.
 The files in this repository are needed as input for [neo4j-data-generation](https://github.com/metabolicatlas/neo4j-data-generation) and the [source code of Metabolic Atlas](https://github.com/metabolicatlas/metabolicatlas).
+
 
 #### Licenses
 
