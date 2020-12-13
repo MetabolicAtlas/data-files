@@ -1,0 +1,94 @@
+# subsystem name must exist in the model
+# filename must be a .svg with only [a-zA-Z0-9_] characters
+
+@subsystem name	map name	filename
+sce00620  Pyruvate metabolism	Pyruvate metabolism	pyruvate_metabolism.svg
+sce00920  Sulfur metabolism	Energy metabolism	energy_metabolism.svg
+#sce00650  Butanoate metabolism	Butanoate metabolism	butanoate_metabolism.svg
+sce00500  Starch and sucrose metabolism	Starch and sucrose metabolism	starch_and_sucrose_metabolism.svg
+#sce04011  MAPK signaling pathway - yeast	MAPK signaling pathway	mapk_signaling_pathway_yeast.svg
+sce00340  Histidine metabolism	Histidine metabolism	histidine_metabolism.svg
+#sce01230  Biosynthesis of amino acids	Biosynthesis of amino acids	biosynthesis_of_amino_acids.svg
+sce00250  Alanine, aspartate and glutamate metabolism	Alanine, aspartate and glutamate metabolism	alanine_aspartate_and_glutamate_metabolism.svg
+sce00330  Arginine and proline metabolism	Arginine and proline metabolism	arginine_and_proline_metabolism.svg
+sce00270  Cysteine and methionine metabolism	Cysteine and methionine metabolism	cysteine_and_methionine_metabolism.svg
+sce00740  Riboflavin metabolism	Riboflavin metabolism	riboflavin_metabolism.svg
+sce00290  Valine, leucine and isoleucine biosynthesis	Valine, leucine and isoleucine biosynthesis	valine_leucine_and_isoleucine_metabolism.svg
+sce00660  C5-Branched dibasic acid metabolism	C5-Branched dibasic acid metabolism	c5_branched_dibasic_acid_metabolism.svg
+sce00770  Pantothenate and CoA biosynthesis	Pantothenate and CoA biosynthesis	pantothenate_and_coa_biosynthesis.svg
+#sce01130  Biosynthesis of antibiotics	Biosynthesis of antibiotics	biosynthesis_of_antibiotics.svg
+#sce01210  2-Oxocarboxylic acid metabolism	2-Oxocarboxylic acid metabolism	2_oxocarboxylic_acid_metabolism.svg
+sce00790  Folate biosynthesis	Folate biosynthesis	folate_biosynthesis.svg
+sce00130  Ubiquinone and other terpenoid-quinone biosynthesis	Ubiquinone and other terpenoid-quinone biosynthesis	ubiquinone_and_other_terpenoid_quinone_biosynthesis.svg
+sce00300  Lysine biosynthesis	Lysine biosynthesis	lysine_metabolism.svg
+sce00350  Tyrosine metabolism	Tyrosine metabolism	tyrosine_metabolism.svg
+sce00360  Phenylalanine metabolism	Phenylalanine metabolism	phenylalanine_metabolism.svg
+sce00380  Tryptophan metabolism	Tryptophan metabolism	tryptophan_metabolism.svg
+sce00400  Phenylalanine, tyrosine and tryptophan biosynthesis	Phenylalanine, tyrosine and tryptophan biosynthesis	phenylalanine_tyrosine_and_tryptophan_biosynthesis.svg
+#sce00020  Citrate cycle (TCA cycle)	Citrate cycle (TCA cycle)	citrate_cycle_tca_cycle.svg
+sce00630  Glyoxylate and dicarboxylate metabolism	Glyoxylate and dicarboxylate metabolism	glyoxylate_and_dicarboxylate_metabolism.svg
+sce01200  Carbon metabolism	Carbon metabolism	carbon_metabolism.svg
+#sce00280  Valine, leucine and isoleucine degradation	Valine, leucine and isoleucine degradation	valine_leucine_and_isoleucine_metabolism.svg
+sce00230  Purine metabolism	Purine metabolism	purine_metabolism.svg
+sce00600  Sphingolipid metabolism	Sphingolipid metabolism	sphingolipid_metabolism.svg
+#Gluconeogenesis	Gluconeogenesis	enesis.svg
+#sce00010  Glycolysis	Glycolysis	glycolysis.svg
+sce00410  beta-Alanine metabolism	beta-Alanine metabolism	beta_alanine_metabolism.svg
+sce00640  Propanoate metabolism	Propanoate metabolism	propanoate_metabolism.svg
+sce00260  Glycine, serine and threonine metabolism	Glycine, serine and threonine metabolism	glycine_serine_and_threonine_metabolism.svg
+sce00750  Vitamin B6 metabolism	Vitamin B6 metabolism	vitamin_b6_metabolism.svg
+#sce04070  Phosphatidylinositol signaling system	Phosphatidylinositol signaling system	phosphatidylinositol_signaling_system.svg
+#sce04138  Autophagy - yeast	Autophagy - yeast	autophagy_yeast.svg
+sce00760  Nicotinate and nicotinamide metabolism	Nicotinate and nicotinamide metabolism	nicotinate_and_nicotinamide_metabolism.svg
+sce00670  One carbon pool by folate	One carbon pool by folate	one_carbon_pool_by_folate.svg
+sce00860  Porphyrin and chlorophyll metabolism	Porphyrin and chlorophyll metabolism	porphyrin_and_chlorophyll_metabolism.svg
+#sce00450  Selenocompound metabolism	Selenocompound metabolism	selenocompound_metabolism.svg
+sce00051  Fructose and mannose metabolism	Fructose and mannose metabolism	fructose_and_mannose_metabolism.svg
+#sce00030  Pentose phosphate pathway	Pentose phosphate pathway	pentose_phosphate_pathway.svg
+#sce00190  Oxidative phosphorylation	Oxidative phosphorylation	oxidative_phosphorylation.svg
+#sce00071  Fatty acid degradation	Fatty acid degradation	fatty_acid_degradation.svg
+#sce01212  Fatty acid metabolism	Fatty acid metabolism	fatty_acid_metabolism.svg
+#sce04146  Peroxisome	Peroxisome	peroxisome.svg
+#sce00072  Synthesis and degradation of ketone bodies	Synthesis and degradation of ketone bodies	synthesis_and_degradation_of_ketone_bodies.svg
+#sce00310  Lysine degradation	Lysine degradation	lysine_metabolism.svg
+sce00900  Terpenoid backbone biosynthesis	Terpenoid backbone biosynthesis	terpenoid_backbone_biosynthesis.svg
+sce00061  Fatty acid biosynthesis	Fatty acid biosynthesis	fatty_acid_biosynthesis.svg
+sce00780  Biotin metabolism	Biotin metabolism	biotin_metabolism.svg
+sce00220  Arginine biosynthesis	Arginine biosynthesis	arginine_biosynthesis.svg
+sce00730  Thiamine metabolism	Thiamine metabolism	thiamine_metabolism.svg
+#sce04111  Cell cycle - yeast	Cell cycle - yeast	cell_cycle_yeast.svg
+sce00100  Steroid biosynthesis	Steroid biosynthesis	steroid_biosynthesis.svg
+#sce01110  Biosynthesis of secondary metabolites	Biosynthesis of secondary metabolites	biosynthesis_of_secondary_metabolites.svg
+sce01040  Biosynthesis of unsaturated fatty acids	Biosynthesis of unsaturated fatty acids	biosynthesis_of_unsaturated_fatty_acids.svg
+sce00563  Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	glycosylphosphatidylinositol_gpi_anchor_biosynthesis.svg
+#sce04113  Meiosis - yeast	Meiosis - yeast	meiosis_yeast.svg
+#sce04213  Longevity regulating pathway - multiple species	Longevity regulating pathway - multiple species	longevity_regulating_pathway_multiple_species.svg
+#sce00970  Aminoacyl-tRNA biosynthesis	Aminoacyl-tRNA biosynthesis	aminoacyl_trna_biosynthesis.svg
+sce00040  Pentose and glucuronate interconversions	Pentose and glucuronate interconversions	pentose_and_glucuronate_interconversions.svg
+sce00561  Glycerolipid metabolism	Glycerolipid metabolism	glycerolipid_metabolism.svg
+#sce00791  Atrazine degradation	Atrazine degradation	atrazine_degradation.svg
+#sce00513  Various types of N-glycan biosynthesis	Various types of N-glycan biosynthesis	various_types_of_n_glycan_biosynthesis.svg
+#sce00514  Other types of O-glycan biosynthesis	Other types of O-glycan biosynthesis	other_types_of_o_glycan_biosynthesis.svg
+sce00052  Galactose metabolism	Galactose metabolism	galactose_metabolism.svg
+sce00240  Pyrimidine metabolism	Pyrimidine metabolism	pyrimidine_metabolism.svg
+#sce00261  Monobactam biosynthesis	Monobactam biosynthesis	monobactam_biosynthesis.svg
+sce00510  N-Glycan biosynthesis	N-Glycan biosynthesis	n_glycan_biosynthesis.svg
+sce00520  Amino sugar and nucleotide sugar metabolism	Amino sugar and nucleotide sugar metabolism	amino_sugar_and_nucleotide_sugar_metabolism.svg
+sce00564  Glycerophospholipid metabolism	Glycerophospholipid metabolism	glycerolipid_metabolism_or_glycerophospholipid_metabolism.svg
+#sce00440  Phosphonate and phosphinate metabolism	Phosphonate and phosphinate metabolism	phosphonate_and_phosphinate_metabolism.svg
+#sce00515  Mannose type O-glycan biosynthesis	Mannose type O-glycan biosynthesis	mannose_type_o_glycan_biosynthesis.svg
+#sce03018  RNA degradation	RNA degradation	rna_degradation.svg
+#sce00430  Taurine and hypotaurine metabolism	Taurine and hypotaurine metabolism	taurine_and_hypotaurine_metabolism.svg
+sce00480  Glutathione metabolism	Glutathione metabolism	glutathione_metabolism.svg
+#sce00332  Carbapenem biosynthesis	Carbapenem biosynthesis	carbapenem_biosynthesis.svg
+#sce00910  Nitrogen metabolism	Nitrogen metabolism	nitrogen_metabolism.svg
+sce04122  Sulfur relay system	Sulfur relay system	sulfur_relay_system.svg
+sce00562  Inositol phosphate metabolism	Inositol phosphate metabolism	inositol_phosphate_metabolism.svg
+#sce00062  Fatty acid elongation	Fatty acid elongation	fatty_acid_elongation.svg
+#sce00909  Sesquiterpenoid and triterpenoid biosynthesis	Sesquiterpenoid and triterpenoid biosynthesis	sesquiterpenoid_and_triterpenoid_biosynthesis.svg
+#sce04145  Phagosome	Phagosome	phagosome.svg
+#sce02010  ABC transporters	ABC transporters	abc_transporters.svg
+#sce04136  Autophagy - other	Autophagy - other	autophagy_other.svg
+#sce04139  Mitophagy - yeast	Mitophagy - yeast	mitophagy_yeast.svg
+#sce04144  Endocytosis	Endocytosis	endocytosis.svg
+#sce04933  AGE-RAGE signaling pathway in diabetic complications	AGE-RAGE signaling pathway in diabetic complications	age_rage_signaling_pathway_in_diabetic_complications.svg
