@@ -154,7 +154,7 @@
     "metabolite_count": 8408,
     "gene_count": 3499,
     "reaction_count": 13102
-  }
+  },
   {
     "short_name": "Zebrafish-GEM",
     "full_name": "Generic genome-scale metabolic model of Danio rerio",
@@ -189,7 +189,7 @@
     "metabolite_count": 8384,
     "gene_count": 3228,
     "reaction_count": 12956
-  }
+  },
   {
     "short_name": "Fruitfly-GEM",
     "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
@@ -224,7 +224,7 @@
     "metabolite_count": 8164,
     "gene_count": 2048,
     "reaction_count": 12072
-  }
+  },
   {
     "short_name": "Worm-GEM",
     "full_name": "Generic genome-scale metabolic model of Caenorhabditis elegans",
