@@ -45,7 +45,7 @@
   {
     "short_name": "Human-GEM",
     "full_name": "Generic genome-scale metabolic model of Homo sapiens",
-    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of human-GEM, which is a genome-scale model of the generic human cell. The objective of human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
+    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of Human-GEM, which is a genome-scale model of the generic human cell. The objective of Human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
     "version": "1.6.0",
     "link": "https://github.com/SysBioChalmers/Human-GEM",
     "chat_link": "https://github.com/SysBioChalmers/Human-GEM/discussions",
@@ -70,7 +70,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2020-10-27",
+    "date": "2021-01-25",
     "sample": {
       "organism": "Homo sapiens",
       "organ_system": null,
