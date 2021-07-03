@@ -45,10 +45,10 @@
   {
     "short_name": "Human-GEM",
     "full_name": "Generic genome-scale metabolic model of Homo sapiens",
-    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of human-GEM, which is a genome-scale model of the generic human cell. The objective of human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
-    "version": "1.3.0",
+    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of Human-GEM, which is a genome-scale model of the generic human cell. The objective of Human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
+    "version": "1.8.0",
     "link": "https://github.com/SysBioChalmers/Human-GEM",
-    "chat_link": "https://gitter.im/SysBioChalmers/Human-GEM",
+    "chat_link": "https://github.com/SysBioChalmers/Human-GEM/discussions",
     "authors": [
       {
         "given_name": "Jonathan",
@@ -70,7 +70,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2019-12-19",
+    "date": "2021-06-21",
     "sample": {
       "organism": "Homo sapiens",
       "organ_system": null,
@@ -89,8 +89,8 @@
     "short_name": "Mouse-GEM",
     "full_name": "Generic genome-scale metabolic model of Mus musculus",
     "description": "Mouse genome-scale metabolic models are important tools for the study of mouse and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Mouse-GEM, which is a genome-scale model of the generic mouse cell. The objective of Mouse-GEM is to serve as a community model for enabling integrative and mechanistic studies of mouse and human metabolism.",
-    "version": "1.1.0",
-    "link": "",
+    "version": "1.2.0",
+    "link": "https://github.com/SysBioChalmers/Mouse-GEM",
     "chat_link": "",
     "authors": [
       {
@@ -107,7 +107,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2021-01-22",
+    "date": "2021-06-23",
     "sample": {
       "organism": "Mus musculus",
       "organ_system": null,
@@ -124,8 +124,8 @@
     "short_name": "Rat-GEM",
     "full_name": "Generic genome-scale metabolic model of Rattus norvegicus",
     "description": "Rat genome-scale metabolic models are important tools for the study of rat and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Rat-GEM, which is a genome-scale model of the generic rat cell. The objective of Rat-GEM is to serve as a community model for enabling integrative and mechanistic studies of rat and human metabolism.",
-    "version": "1.1.0",
-    "link": "",
+    "version": "1.2.0",
+    "link": "https://github.com/SysBioChalmers/Rat-GEM",
     "chat_link": "",
     "authors": [
       {
@@ -142,7 +142,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2021-01-22",
+    "date": "2021-06-23",
     "sample": {
       "organism": "Rattus norvegicus",
       "organ_system": null,
@@ -159,8 +159,8 @@
     "short_name": "Zebrafish-GEM",
     "full_name": "Generic genome-scale metabolic model of Danio rerio",
     "description": "Zebrafish genome-scale metabolic models are important tools for the study of model animal zebrafish and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Zebrafish-GEM, which is a genome-scale model of the generic zebrafish cell. The objective of Zebrafish-GEM is to serve as a community model for enabling integrative and mechanistic studies of zebrafish and human metabolism.",
-    "version": "1.0.0",
-    "link": "",
+    "version": "1.1.0",
+    "link": "https://github.com/SysBioChalmers/Zebrafish-GEM",
     "chat_link": "",
     "authors": [
       {
@@ -177,7 +177,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2021-01-22",
+    "date": "2021-06-23",
     "sample": {
       "organism": "Danio rerio",
       "organ_system": null,
@@ -194,8 +194,8 @@
     "short_name": "Fruitfly-GEM",
     "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
     "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
-    "version": "1.0.0",
-    "link": "",
+    "version": "1.1.0",
+    "link": "https://github.com/SysBioChalmers/Fruitfly-GEM",
     "chat_link": "",
     "authors": [
       {
@@ -212,7 +212,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2021-01-22",
+    "date": "2021-06-23",
     "sample": {
       "organism": "Drosophila melanogaster",
       "organ_system": null,
@@ -229,8 +229,8 @@
     "short_name": "Worm-GEM",
     "full_name": "Generic genome-scale metabolic model of Caenorhabditis elegans",
     "description": "Worm genome-scale metabolic models are important tools for the study of worm and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Worm-GEM, which is a genome-scale model of the generic worm cell. The objective of Worm-GEM is to serve as a community model for enabling integrative and mechanistic studies of worm and human metabolism.",
-    "version": "1.0.0",
-    "link": "",
+    "version": "1.1.0",
+    "link": "https://github.com/SysBioChalmers/Worm-GEM",
     "chat_link": "",
     "authors": [
       {
@@ -247,7 +247,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2022-01-22",
+    "date": "2021-06-23",
     "sample": {
       "organism": "Caenorhabditis elegans",
       "organ_system": null,
