@@ -88,7 +88,7 @@
   {
     "short_name": "Mouse-GEM",
     "full_name": "Generic genome-scale metabolic model of Mus musculus",
-    "description": "Mouse genome-scale metabolic models are important tools for the study of mouse and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Mouse-GEM, which is a genome-scale model of the generic mouse cell. The objective of Mouse-GEM is to serve as a community model for enabling integrative and mechanistic studies of mouse and human metabolism.",
+    "description": "Mouse genome-scale metabolic models are important tools for the study of mouse and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Mouse-GEM, which is a genome-scale model of the generic mouse cell. The objective of Mouse-GEM is to serve as a community model for enabling integrative and mechanistic studies of mouse and human metabolism.",
     "version": "1.2.0",
     "link": "https://github.com/SysBioChalmers/Mouse-GEM",
     "chat_link": "",
@@ -123,7 +123,7 @@
   {
     "short_name": "Rat-GEM",
     "full_name": "Generic genome-scale metabolic model of Rattus norvegicus",
-    "description": "Rat genome-scale metabolic models are important tools for the study of rat and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Rat-GEM, which is a genome-scale model of the generic rat cell. The objective of Rat-GEM is to serve as a community model for enabling integrative and mechanistic studies of rat and human metabolism.",
+    "description": "Rat genome-scale metabolic models are important tools for the study of rat and human health and diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Rat-GEM, which is a genome-scale model of the generic rat cell. The objective of Rat-GEM is to serve as a community model for enabling integrative and mechanistic studies of rat and human metabolism.",
     "version": "1.2.0",
     "link": "https://github.com/SysBioChalmers/Rat-GEM",
     "chat_link": "",
@@ -158,7 +158,7 @@
   {
     "short_name": "Zebrafish-GEM",
     "full_name": "Generic genome-scale metabolic model of Danio rerio",
-    "description": "Zebrafish genome-scale metabolic models are important tools for the study of model animal zebrafish and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Zebrafish-GEM, which is a genome-scale model of the generic zebrafish cell. The objective of Zebrafish-GEM is to serve as a community model for enabling integrative and mechanistic studies of zebrafish and human metabolism.",
+    "description": "Zebrafish genome-scale metabolic models are important tools for the study of model animal zebrafish and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Zebrafish-GEM, which is a genome-scale model of the generic zebrafish cell. The objective of Zebrafish-GEM is to serve as a community model for enabling integrative and mechanistic studies of zebrafish and human metabolism.",
     "version": "1.1.0",
     "link": "https://github.com/SysBioChalmers/Zebrafish-GEM",
     "chat_link": "",
@@ -193,7 +193,7 @@
   {
     "short_name": "Fruitfly-GEM",
     "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
-    "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
+    "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
     "version": "1.1.0",
     "link": "https://github.com/SysBioChalmers/Fruitfly-GEM",
     "chat_link": "",
@@ -228,7 +228,7 @@
   {
     "short_name": "Worm-GEM",
     "full_name": "Generic genome-scale metabolic model of Caenorhabditis elegans",
-    "description": "Worm genome-scale metabolic models are important tools for the study of worm and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the first version of Worm-GEM, which is a genome-scale model of the generic worm cell. The objective of Worm-GEM is to serve as a community model for enabling integrative and mechanistic studies of worm and human metabolism.",
+    "description": "Worm genome-scale metabolic models are important tools for the study of worm and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Worm-GEM, which is a genome-scale model of the generic worm cell. The objective of Worm-GEM is to serve as a community model for enabling integrative and mechanistic studies of worm and human metabolism.",
     "version": "1.1.0",
     "link": "https://github.com/SysBioChalmers/Worm-GEM",
     "chat_link": "",
