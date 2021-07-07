@@ -1,0 +1,3 @@
+# The compartment name must exist in the model
+# The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
+# At moment there is no compartment SVG map for this model, however, it might be added with future model updates
