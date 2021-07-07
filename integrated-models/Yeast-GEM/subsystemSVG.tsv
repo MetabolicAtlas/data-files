@@ -1,5 +1,5 @@
-# subsystem name must exist in the model
-# filename must be a .svg with only [a-zA-Z0-9_] characters
+# The subsystem name must exist in the model
+# The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
 
 @subsystem name	map name	filename
 sce00040  Pentose and glucuronate interconversions	Pentose and glucuronate interconversions	pentose_and_glucuronate_interconversions.svg

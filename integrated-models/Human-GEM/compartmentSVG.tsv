@@ -1,5 +1,5 @@
-# compartment name must exist in the model
-# filename must be a .svg with only [a-zA-Z0-9_] characters
+# The compartment name must exist in the model
+# The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
 
 @compartment name	Map name	filename
 Cytosol	Part 1	cytosol_1.svg
