@@ -2,3 +2,4 @@
 # The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
 # At moment there is no custom SVG map for this model, however, it might be added with future model updates
 @Map name	filename
+Protein secretion pathway	prot_deg_final.svg
