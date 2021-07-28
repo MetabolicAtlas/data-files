@@ -1,0 +1,12 @@
+{
+  "name": "Sample Source",
+  "link": "https://metabolicatlas.org",
+  "dataSets": [
+    "adipose tissue",
+    "adrenal gland"
+  ],
+  "levels": {
+    "ENSG00000000419": [45.6, 69.7],
+    "ENSG00000000938": [29.1, 5.7]
+  }
+}
