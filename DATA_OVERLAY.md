@@ -25,7 +25,7 @@ For each integrated model, Data overlay allows for multiple data types, such as 
 
 When one dataset is selected in the Data overlay, each value in the 0-1 range corresponds to a color in the following spectrum.
 
-<div style="width: 300px; height: 20px; background-image: linear-gradient(to right, rgb(255, 255, 255), rgb(255, 233, 69), rgb(255, 89, 0)); border: 1px solid gray;"></div>
+<img width="300" alt="image" src="https://user-images.githubusercontent.com/423498/128190295-e70b6b13-f51e-4076-99ee-3094287466d3.png">
 
 The requirement for all values to be in the 0-1 range is to ensure values from different data sources can be handled the same way by the visualization component.
 
@@ -33,7 +33,7 @@ When adding new data sources, it is important to not excessively limit the range
 
 Data overlay also allows for two datasets to be selected at the same time. When this is the case, the following spectrum is used instead.
 
-<div style="width: 300px; height: 20px; background-image: linear-gradient(to right, rgb(0, 51, 204), rgb(247, 248, 253), rgb(147, 1, 1)); border: 1px solid gray;"></div>
+<img width="300" alt="image" src="https://user-images.githubusercontent.com/423498/128190231-8b475022-109e-4905-8a01-5e862c397899.png">
 
 ## Folder structure and naming conventions
 
