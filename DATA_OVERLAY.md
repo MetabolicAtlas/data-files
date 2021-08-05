@@ -39,7 +39,7 @@ Data overlay also allows for two datasets to be selected at the same time. When 
 
 All data source files should be stored in the [data-files repo](https://github.com/MetabolicAtlas/data-files).
 
-Under each integrated model, there should be a `dataOverlay` folder, for example: `data-files/integrated-models/Human-GEM/dataOverlay`. If not, it means the model currently does not have any data sources for data overlay and the `dataOverlay` folder should be added.
+Under each folder in [`/integrated-models`](https://github.com/MetabolicAtlas/data-files/tree/main/integrated-models), there should be a `dataOverlay` folder, for example: `data-files/integrated-models/Human-GEM/dataOverlay`. If not, it means the model currently does not have any data sources for data overlay and the `dataOverlay` folder should be added.
 
 Inside of the `dataOverlay` folder, there could be one or more folders, where the name of each folder should be the data type. Currently, the types `transcriptomics` and `metabolomics` are supported.
 
