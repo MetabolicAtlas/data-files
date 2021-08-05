@@ -29,7 +29,8 @@ When one dataset is selected in the Data overlay, each value in the 0-1 range co
 
 The requirement for all values to be in the 0-1 range is to ensure values from different data sources can be handled the same way by the visualization component.
 
-When adding new data sources, it is important to not excessively limit the range of the values. For example, it might not be good if all of the values are within 0.01 and 0.02, as that would cover a small segment of the color spectrum. Ideally, the minimum value of the data source should be as close to 0 as possible, while the maximum value should be as close to 1 as possible, with as even distribution as possible between for the rest of the values.
+When adding new data sources, it is important to inspect the range of the values. For example, if all of the values are within 0.01 and 0.02, only a small segment of the color spectrum will be used. Similarly, for uneven distribution, e.g. if 50% of the data is within 0.01 - 0.02 and 30% is within 0.98 - 0.99, the same visualization problem would be encountered.
+Ideally, the minimum value of the data source should be as close to 0 as possible, while the maximum value should be as close to 1 as possible, with as even distribution as possible between for the rest of the values.
 
 Data overlay also allows for two datasets to be selected at the same time. When this is the case, the following spectrum is used instead.
 
