@@ -55,4 +55,4 @@ Inside of a data type folder, there could be one or more data source files, such
 
 When incorporating new data sources, it should be done via a pull request in the [data-files repo](https://github.com/MetabolicAtlas/data-files). The above rules and conventions about data format as well as folder structure should be followed.
 
-If it is difficult to establish how to transform the values into the 0-1 scale, please add a note about this in the pull request description and set the pull request to draft mode.
+If it is difficult to establish how to transform the values into the 0-1 scale, please add a note about this in the pull request description and [set the pull request to `draft` mode](https://github.blog/2019-02-14-introducing-draft-pull-requests/).
