@@ -55,4 +55,6 @@ Inside of a data type folder, there could be one or more data source files, such
 
 When incorporating new data sources, it should be done via a pull request in the [data-files repo](https://github.com/MetabolicAtlas/data-files). The above rules and conventions about data format as well as folder structure should be followed.
 
+To validate the data to be added, please try to load it as custom expression data at the [data overlay functionality](localhost/explore/Human-GEM/map-viewer/golgi_apparatus?dim=2d&panel=1) of Metabolic Atlas. If no errors are reported, the data is formatted correctly.
+
 If it is difficult to establish how to transform the values into the 0-1 scale, please add a note about this in the pull request description and [set the pull request to `draft` mode](https://github.blog/2019-02-14-introducing-draft-pull-requests/).
