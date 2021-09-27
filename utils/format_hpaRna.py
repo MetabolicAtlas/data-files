@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import argparse
-
+import yaml
 
 def scalingfunc(x, U = 10):
     return min(1, np.log2(x + 1)/U)
@@ -29,6 +29,25 @@ def apply_scale(df, U):
         'TPM (lg, U=%g)'%(U) : dt_tpm_lg,
         })
     return df_lg
+
+def getGeneIdSetFromModel(modelfile):
+    """Retrieve set of gene Ids from the modelfile
+       return None of failed to parse the model file
+    """
+    geneIdList = []
+    with open(modelfile, "r") as stream:
+        try:
+            modeldata = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print("Failed to parse model file %s"%(modelfile),  file = sys.stderr)
+            return None
+    for (key, content) in modeldata:
+        if key == "genes":
+            for idlist in content:
+                for idtuple in idlist:
+                    geneIdList.append(idtuple[1])
+    geneIdSet = set(geneIdList)
+    return geneIdSet
 
 def plot(df_lg, U, figfile):
     fig = plt.figure(figsize=(15,8))
@@ -55,23 +74,24 @@ def plot(df_lg, U, figfile):
     plt.clf()
     plt.close()
 
-def formatHpaRna(df, U, outfile):
+def formatHpaRna(df, U, geneIdSet, outfile):
     try:
         fpout = open(outfile, 'w')
         tissueList = df['Tissue'].unique().tolist()
         fpout.write("\t".join(["id"]+tissueList)+"\n")
         grouped_df = df.groupby(['Gene'])
         for key, item in grouped_df:
-            df1 = grouped_df.get_group(key).reset_index()
-            values = df1['TPM'].apply(scalingfunc, U)
-            dt = {}
-            for i in range(len(df1)):
-                dt[df1.iloc[i]['Tissue']] = values[i]
-            li = []
-            li.append(key)
-            for tissue in tissueList:
-                li.append("%.3g"%(dt[tissue]))
-            fpout.write("\t".join(li)+"\n")
+            if geneIdSet is None or key in geneIdSet:
+                df1 = grouped_df.get_group(key).reset_index()
+                values = df1['TPM'].apply(scalingfunc, U)
+                dt = {}
+                for i in range(len(df1)):
+                    dt[df1.iloc[i]['Tissue']] = values[i]
+                li = []
+                li.append(key)
+                for tissue in tissueList:
+                    li.append("%.3g"%(dt[tissue]))
+                fpout.write("\t".join(li)+"\n")
         fpout.close()
     except:
         sys.stderr.write("Failed to write to file %s"%(outfile))
@@ -88,12 +108,14 @@ def main():
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog='''\
 Example:
-  format_hpaRna.py -i rna_tissue_hpa.tsv -o hpaRna.tsv -ofig ana_distribution
+  format_hpaRna.py -i rna_tissue_hpa.tsv -o hpaRna.tsv -m Human-GEM_v1.8.0.yml -ofig ana_distribution
 
 Created 2021-09-24, updated 2021-09-24, Nanjiang Shu
 ''')
     parser.add_argument('-i', metavar='FILE', dest='hpaRnaFile', required=True,
             help='provide the hpaRna data file')
+    parser.add_argument('-m', metavar='FILE', dest='modelfile', required=True,
+            help='provide the Human-GEM yaml file')
     parser.add_argument('-o' , metavar='OUTFILE', dest='outfile', required=True,
             help='output the result to outfile')
     parser.add_argument('-ofig' , metavar='OUTFILE', dest='figfile', required=False,
@@ -101,8 +123,12 @@ Created 2021-09-24, updated 2021-09-24, Nanjiang Shu
 
     args = parser.parse_args()
     hpaRnaFile = args.hpaRnaFile
+    modelfile = args.modelfile
     outfile = args.outfile
     figfile = args.figfile
+
+    geneIdSet = getGeneIdSetFromModel(modelfile)
+
 
     df = pd.read_csv(hpaRnaFile, sep='\t')
 
@@ -111,7 +137,7 @@ Created 2021-09-24, updated 2021-09-24, Nanjiang Shu
     vf_log = np.vectorize(logfunc)
     U = logfunc(calMax(qt_TPM))
 
-    formatHpaRna(df, U, outfile)
+    formatHpaRna(df, U, geneIdSet, outfile)
 
     if figfile != None and figfile != "":
         outputDistFig(df, U, figfile)
