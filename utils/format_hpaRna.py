@@ -20,10 +20,14 @@ def logfunc(x):
     return np.log2(x+1)
 
 def calMax(qt):
-    # input: percentile [25, 50 ,75]
+    """Estimate the upper whisker of the data set. See https://en.wikipedia.org/wiki/Box_plot for details.
+    Input: percentile [25, 50 ,75]
+    """
     return qt[2] + 1.5*(qt[2]-qt[0])
 
 def apply_scale(df, U):
+    """Apply the scaling function to the data set.
+    """
     dt_tpm_lg = df['TPM'].apply(scalingfunc, U=U)
     df_lg = pd.DataFrame({ 
         'TPM (lg, U=%g)'%(U) : dt_tpm_lg,
@@ -31,8 +35,8 @@ def apply_scale(df, U):
     return df_lg
 
 def getGeneIdSetFromModel(modelfile):
-    """Retrieve set of gene Ids from the modelfile
-       return None of failed to parse the model file
+    """Retrieve set of gene Ids from the modelfile.
+       Return None if failed to parse the model file.
     """
     geneIdList = []
     with open(modelfile, "r") as stream:
@@ -50,6 +54,8 @@ def getGeneIdSetFromModel(modelfile):
     return geneIdSet
 
 def plot(df_lg, U, figfile):
+    """Plot the curve of the scaling function and the distribution of the data set after scaling.
+    """
     fig = plt.figure(figsize=(15,8))
     gs = fig.add_gridspec(1,2)
 
@@ -75,6 +81,9 @@ def plot(df_lg, U, figfile):
     plt.close()
 
 def formatHpaRna(df, U, geneIdSet, outfile):
+    """Output the scaled TPM values from the HPA RNA tissue data.
+    Genes that do not exist in the Human-GEM model are filtered.
+    """
     try:
         fpout = open(outfile, 'w')
         tissueList = df['Tissue'].unique().tolist()
@@ -110,7 +119,7 @@ def main():
 Example:
   format_hpaRna.py -i rna_tissue_hpa.tsv -o hpaRna.tsv -m Human-GEM_v1.8.0.yml -ofig ana_distribution
 
-Created 2021-09-24, updated 2021-09-24, Nanjiang Shu
+Created 2021-09-24, updated 2021-09-28, Nanjiang Shu
 ''')
     parser.add_argument('-i', metavar='FILE', dest='hpaRnaFile', required=True,
             help='provide the hpaRna data file')
