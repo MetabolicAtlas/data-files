@@ -37,10 +37,7 @@
     },
     "ref": [
       "31395883"
-    ],
-    "metabolite_count": 1331,
-    "gene_count": 1149,
-    "reaction_count": 3991
+    ]
   },
   {
     "short_name": "Human-GEM",
@@ -80,10 +77,7 @@
     },
     "ref": [
       "32209698"
-    ],
-    "metabolite_count": 4164,
-    "gene_count": 3625,
-    "reaction_count": 13417
+    ]
   },
   {
     "short_name": "Mouse-GEM",
@@ -117,10 +111,7 @@
     },
     "ref": [
       "34282017"
-    ],
-    "metabolite_count": 8404,
-    "gene_count": 3510,
-    "reaction_count": 13094
+    ]
   },
   {
     "short_name": "Rat-GEM",
@@ -154,10 +145,7 @@
     },
     "ref": [
       "34282017"
-    ],
-    "metabolite_count": 8408,
-    "gene_count": 3499,
-    "reaction_count": 13102
+    ]
   },
   {
     "short_name": "Zebrafish-GEM",
@@ -191,10 +179,7 @@
     },
     "ref": [
       "34282017"
-    ],
-    "metabolite_count": 8384,
-    "gene_count": 3228,
-    "reaction_count": 12956
+    ]
   },
   {
     "short_name": "Fruitfly-GEM",
@@ -228,10 +213,7 @@
     },
     "ref": [
       "34282017"
-    ],
-    "metabolite_count": 8164,
-    "gene_count": 2048,
-    "reaction_count": 12072
+    ]
   },
   {
     "short_name": "Worm-GEM",
@@ -265,9 +247,6 @@
     },
     "ref": [
       "34282017"
-    ],
-    "metabolite_count": 8158,
-    "gene_count": 1946,
-    "reaction_count": 12169
+    ]
   }
 ]
