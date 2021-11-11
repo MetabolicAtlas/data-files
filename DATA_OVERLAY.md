@@ -42,19 +42,18 @@ The gene expression levels used in [Data overlay](https://metabolicatlas.org/doc
 
 ![Histogram of HPA raw data](./utils/img/hpaRNA-TPM-rawdata-histogram.png)
 
-Therefore if we map the raw HPA data to the range of 0-1 linearly, almost all scaled data
-will be close to zero. This makes the separation of genes by their expression levels with Data overlay ineffective. Due to the fact that the raw data is logarithmic, the following equation is used to map the raw data to the range of 0-1:
-```math
+Therefore if we map the raw HPA data to the range of 0-1 linearly, almost all scaled data will be close to zero. This makes the separation of genes by their expression levels with Data overlay ineffective. Due to the fact that the raw data is logarithmic, the following equation is used to map the raw data to the range of 0-1:
+```
 scaled_data = min(1, log2(raw_data + 1)/U)
 
 ```
 where `U` is defined as
-```math
+```
 U = UQ + 1.5*IQR
 ```
 where UQ stands for Upper Quartile and IQR stands for InterQuartile Range.
 
-As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1. 
+As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1.
 
 ![Histogram of HPA scaled data](./utils/img/hpaRNA-TPM-scaleddata-histogram.png)
 
