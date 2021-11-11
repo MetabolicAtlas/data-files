@@ -38,21 +38,25 @@ Data overlay also allows for two datasets to be selected at the same time. When 
 
 ### Scaling of gene expression levels from Human Protein Atlas
 
-The gene expression levels used in [Data overlay](https://metabolicatlas.org/documentation#Data-overlay) for Human-GEM are obtained from the [Human Protein Atlas](https://www.proteinatlas.org/)(HPA), more specifically, the `TPM (transcripts per million )` data from the file [rna_tissue_hpa.tsv](https://www.proteinatlas.org/download/rna_tissue_hpa.tsv.zip). However, the raw data from HPA is logarithmic, which means the absolute majority of data are clustered in a very narrow bin in the distribution as shown in the histogram figure below.
+The gene expression levels used in [Data overlay](https://metabolicatlas.org/documentation#Data-overlay) for Human-GEM are obtained from the [Human Protein Atlas](https://www.proteinatlas.org/)(HPA), more specifically, the TPM (transcripts per million) data from the file [rna_tissue_hpa.tsv](https://www.proteinatlas.org/download). However, the raw data from HPA is logarithmic, which means the absolute majority of data are clustered in a very narrow bin in the distribution as shown in the histogram figure below.
 
-If we map the raw HPA data to the 0-1 range linearly, almost all scaled values
-will be close to zero. This makes the separation of genes by their expression levels with Data overlay ineffective. Due to the fact that the raw data is logarithmic, the following equation is used to map the raw data to the 0-1 range:
-```
+![Histogram of HPA raw data](./utils/img/hpaRNA-TPM-rawdata-histogram.png)
+
+Therefore if we map the raw HPA data to the range of 0-1 linearly, almost all scaled data
+will be close to zero. This makes the separation of genes by their expression levels with Data overlay ineffective. Due to the fact that the raw data is logarithmic, the following equation is used to map the raw data to the range of 0-1:
+```math
     scaled_data = min(1, log<sub>2</sub>(raw_data + 1)/U)
 
 ```
 where `U` is defined as
-```
+```math
     U = UQ + 1.5*IQR
 ```
-UQ stands for Upper Quartile and IQR stands for InterQuartile Range
+where UQ stands for Upper Quartile and IQR stands for InterQuartile Range.
 
 As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1 
+
+![Histogram of HPA scaled data](./utils/img/hpaRNA-TPM-scaleddata-histogram.png)
 
 ## Folder structure and naming conventions
 
