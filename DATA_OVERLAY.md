@@ -51,7 +51,7 @@ where `U` is defined as
 ```
 U = UQ + 1.5*IQR
 ```
-where UQ stands for Upper Quartile and IQR stands for InterQuartile Range.
+where `UQ` stands for Upper Quartile and `IQR` stands for InterQuartile Range.
 
 As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1.
 
