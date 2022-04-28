@@ -18,6 +18,13 @@ RELEASE_PMID_DICT = {
 
 # define PMID for each GEM
 GEM_PMID_DICT = {
+        'Yeast-GEM': '31395883',
+        'Human-GEM': '32209698',
+        'Mouse-GEM': '34282017',
+        'Rat-GEM': '34282017',
+        'Zebrafish-GEM': '34282017',
+        'Fruitfly-GEM': '34282017',
+        'Worm-GEM': '34282017',
         }
 
 
@@ -31,6 +38,7 @@ def writefile(content, outfile, mode='w', is_flush=False):
         fpout.close()
     except IOError:
         print(f"Failed to write to {outfile}", file=sys.stderr)
+
 
 def get_count(repo_name, api_token):
     """Get count for genes, reactions and metabolites"""
