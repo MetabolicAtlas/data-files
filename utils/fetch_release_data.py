@@ -76,6 +76,9 @@ def get_release_data(repo_name, git_api):
         gem_data['validation'] = get_validation(repo_name, git_api)
         gem_data_list.append(gem_data)
 
+    # sort the releases in the ascending order
+    gem_data_list = gem_data_list[::-1]
+
     return gem_data_list
 
 
