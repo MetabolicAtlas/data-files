@@ -1,0 +1,29 @@
+[
+  {
+    "id": "Rat-GEM-1.0.0",
+    "externalParentId": [],
+    "releaseDate": "2020-10-24",
+    "releaseLink": "https://github.com/SysBioChalmers/Rat-GEM/releases/tag/v1.0.0",
+    "PMID": "34282017",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Rat-GEM-1.1.0",
+    "externalParentId": [],
+    "releaseDate": "2021-01-15",
+    "releaseLink": "https://github.com/SysBioChalmers/Rat-GEM/releases/tag/v1.1.0",
+    "PMID": "34282017",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Rat-GEM-1.2.0",
+    "externalParentId": [],
+    "releaseDate": "2021-07-17",
+    "releaseLink": "https://github.com/SysBioChalmers/Rat-GEM/releases/tag/v1.2.0",
+    "PMID": "34282017",
+    "count": {},
+    "validation": {}
+  }
+]
