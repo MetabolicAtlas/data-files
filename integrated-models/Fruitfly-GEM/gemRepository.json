@@ -1,7 +1,12 @@
 [
   {
     "id": "Fruitfly-GEM-1.0.0",
-    "externalParentId": [],
+    "externalParentId": [
+      {
+        "id": "Human-GEM-1.5.0",
+        "citLink": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8325244/#:~:text=In%20this%20pipeline%2C%20the%20open%2Dcurated%20generic%20human%20GEM%2C%20Human1%20(11)%2C%20was%20used%20as%20a%20template"
+      }
+    ],
     "releaseDate": "2021-01-17",
     "releaseLink": "https://github.com/SysBioChalmers/Fruitfly-GEM/releases/tag/v1.0.0",
     "PMID": "34282017",
