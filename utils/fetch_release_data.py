@@ -9,7 +9,38 @@ import argparse
 from github import Github
 
 # define data for externalParentId
+CITLINK_1 = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8325244/#:~:text=In%20this%20pipeline%2C%20the%20open%2Dcurated%20generic%20human%20GEM%2C%20Human1%20(11)%2C%20was%20used%20as%20a%20template'
 EXT_PARENT_ID = {
+        'Mouse-GEM-1.0.0': [
+            {
+                'id': 'Human-GEM-1.5.0',
+                'citLink': CITLINK_1
+                }
+            ],
+        'Rat-GEM-1.0.0': [
+            {
+                'id': 'Human-GEM-1.5.0',
+                'citLink': CITLINK_1
+                }
+            ],
+        'Zebrafish-GEM-1.0.0': [
+            {
+                'id': 'Human-GEM-1.5.0',
+                'citLink': CITLINK_1
+                }
+            ],
+        'Fruitfly-GEM-1.0.0': [
+            {
+                'id': 'Human-GEM-1.5.0',
+                'citLink': CITLINK_1
+                }
+            ],
+        'Worm-GEM-1.0.0': [
+            {
+                'id': 'Human-GEM-1.5.0',
+                'citLink': CITLINK_1
+                }
+            ],
         }
 
 # define PMID for each specific release (if there is any)
