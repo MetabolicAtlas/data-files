@@ -185,7 +185,7 @@
     "short_name": "Fruitfly-GEM",
     "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
     "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "link": "https://github.com/SysBioChalmers/Fruitfly-GEM",
     "chat_link": "",
     "authors": [
@@ -203,7 +203,7 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2021-06-23",
+    "date": "2022-05-03",
     "sample": {
       "organism": "Drosophila melanogaster",
       "organ_system": null,
