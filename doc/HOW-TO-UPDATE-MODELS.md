@@ -9,12 +9,23 @@ This document provides some instructions about how to update models manually.
 
 It is strongly recommended to update one model a time.
 
-- Get the list of the integrated models by listing the folder `./integrated-models/` in the repo `data-files`.
+- Get a list of the models that can be updated by running 
+  ```
+  ./utils/fetch_release_data.py -s
+  ```
+  The command will output a list of models that can be updated. e.g. 
+
+  ```
+  Yeast-GEM can be updated: 8.4.2 => 8.6.0
+  Human-GEM can be updated: 1.10.0 => 1.11.0
+  Mouse-GEM can be updated: 1.2.0 => 1.3.0
+  Rat-GEM can be updated: 1.2.0 => 1.3.0
+  Zebrafish-GEM can be updated: 1.1.0 => 1.2.0
+  Fruitfly-GEM can be updated: 1.1.0 => 1.2.0
+  Worm-GEM can be updated: 1.1.0 => 1.3.0
+  ```
 
 - Select a target model
-
-- Skip if the target model in `data-files` is already the latest version
-  compared to the model at [SysBioChalmers](https://github.com/SysBioChalmers)
 
 - Clone the target model from [SysBioChalmers](https://github.com/SysBioChalmers).
 
