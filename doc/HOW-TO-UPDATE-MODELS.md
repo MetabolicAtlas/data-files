@@ -25,35 +25,35 @@ It is strongly recommended to update one model a time.
   Worm-GEM can be updated: 1.1.0 => 1.3.0
   ```
 
-- Select a target model
+- Select a target model.
 
 - Clone the target model from [SysBioChalmers](https://github.com/SysBioChalmers).
 
 - Check out the latest version.
 
-- Copy the YAML file and all TSV files (inside the subfolder `model` to the
+- Copy the YAML file and all TSV files (inside the subfolder `model`) to the
    folder `integrated-models/xxx-GEM` in the repo `data-files`, where `xxx-GEM`
    stands for the name of the target model. Note that for `Yeast-GEM`, you
    should rename `yeast-GEM.yml` to `yeastGEM.yml` after copying.
 
-- Modify or add the entities for `short_name`, `data`, and `version` if they
+- Modify or add the entities for `short_name`, `date`, and `version` if they
    are missing or not with the desired format. 
-   The `short_name` should be in the format `Human-GEM`, that is, with a `-` to
-   separate the species name and the term `GEM`, and the first letter of the
+   The `short_name` should be in the format `Fruitfly-GEM`, that is, with a `-` to
+   separate the species name and the term `GEM`; and the first letter of the
    species should be capitalized.
 
 - Update the entries `version` and `date` in the file
    `integrated-models/integratedModels.json` for the target model. Make
-   sure the `version` and the `data` in the JSON file match the values in the
+   sure the `version` and the `date` in the JSON file match the values in the
    YAML file.
 
 - Run `./generate` in the repo `data-generation`. If there are any error
    messages, fix the model files according to the message. Repeat until no
-   error message is shown with data generation
+   error message is shown with data generation.
 
 - Re-build and re-deploy the stack locally. Then run the test by 
    ```ma-exec api yarn test``` and play around with the web pages.
-   If there are any abnormal behaviors of found. Try to solved it.
+   If there are any abnormal behaviors found, try to solved it.
    Note that a few failed tests are expected since some of the components might
    be removed in the updated models.
 
