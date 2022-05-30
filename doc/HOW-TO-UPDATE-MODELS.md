@@ -9,7 +9,8 @@ This document provides some instructions about how to update models manually.
 
 It is strongly recommended to update one model a time.
 
-- Get a list of the models that can be updated by running 
+- Get a list of the models that can be updated 
+  
   Install required Python packages by 
 
   ```
