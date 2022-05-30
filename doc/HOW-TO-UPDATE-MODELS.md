@@ -32,7 +32,7 @@ It is strongly recommended to update one model a time.
 - Check out the latest version.
 
 - Copy the YAML file and all TSV files (inside the subfolder `model`) to the
-   folder `integrated-models/xxx-GEM` in the repo `data-files`, where `xxx-GEM`
+   folder `integrated-models/xyz-GEM` in the repo `data-files`, where `xyz-GEM`
    stands for the name of the target model. Note that for `Yeast-GEM`, you
    should rename `yeast-GEM.yml` to `yeastGEM.yml` after copying.
 
