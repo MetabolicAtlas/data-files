@@ -53,7 +53,7 @@ It is strongly recommended to update one model a time.
 
 - Re-build and re-deploy the stack locally. Then run the test by 
    ```ma-exec api yarn test``` and play around with the web pages.
-   If there are any abnormal behaviors found, try to solved it.
+   If there are any abnormal behaviors found, try to solve it.
    Note that a few failed tests are expected since some of the components might
    be removed in the updated models.
 
