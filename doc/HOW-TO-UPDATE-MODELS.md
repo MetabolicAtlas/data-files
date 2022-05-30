@@ -10,10 +10,18 @@ This document provides some instructions about how to update models manually.
 It is strongly recommended to update one model a time.
 
 - Get a list of the models that can be updated by running 
+  Install required Python packages by 
+
   ```
-  ./utils/fetch_release_data.py -s
+  pip install -r ./utils/requirements.txt
   ```
-  The command will output a list of models that can be updated. e.g. 
+
+  and then run
+
+  ```
+  python ./utils/fetch_release_data.py -s
+  ```
+  The above command will output a list of models that can be updated. e.g. 
 
   ```
   Yeast-GEM can be updated: 8.4.2 => 8.6.0
