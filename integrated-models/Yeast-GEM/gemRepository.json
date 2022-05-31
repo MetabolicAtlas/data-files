@@ -214,5 +214,14 @@
     "PMID": "31395883",
     "count": {},
     "validation": {}
+  },
+  {
+    "id": "Yeast-GEM-8.6.0",
+    "externalParentId": [],
+    "releaseDate": "2022-05-18",
+    "releaseLink": "https://github.com/SysBioChalmers/yeast-GEM/releases/tag/v8.6.0",
+    "PMID": "31395883",
+    "count": {},
+    "validation": {}
   }
 ]
