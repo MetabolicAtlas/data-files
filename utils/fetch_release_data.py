@@ -178,7 +178,7 @@ def main():
     parser.add_argument('-d', '--dry', dest='is_dryrun', default=False,
                         help='do not save output to file',
                         action='store_true')
-    parser.add_argument('-u', '--show-updatable-model',
+    parser.add_argument('-s', '--show-updatable-model',
                         dest='is_show_updatable_model', default=False,
                         help='show updatable models',
                         action='store_true')
