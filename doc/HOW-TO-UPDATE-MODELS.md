@@ -69,3 +69,8 @@ It is strongly recommended to update one model a time.
 - If everything works as expected, commit the changes and work on the next
    model.
 
+Finally, update the timeline of model history by
+
+    ```
+    python ./utils/fetch_release_data.py
+    ```
