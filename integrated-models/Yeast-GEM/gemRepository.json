@@ -223,5 +223,23 @@
     "PMID": "31395883",
     "count": {},
     "validation": {}
+  },
+  {
+    "id": "Yeast-GEM-8.6.1",
+    "externalParentId": [],
+    "releaseDate": "2022-09-05",
+    "releaseLink": "https://github.com/SysBioChalmers/yeast-GEM/releases/tag/v8.6.1",
+    "PMID": "31395883",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Yeast-GEM-8.6.2",
+    "externalParentId": [],
+    "releaseDate": "2022-09-05",
+    "releaseLink": "https://github.com/SysBioChalmers/yeast-GEM/releases/tag/v8.6.2",
+    "PMID": "31395883",
+    "count": {},
+    "validation": {}
   }
 ]

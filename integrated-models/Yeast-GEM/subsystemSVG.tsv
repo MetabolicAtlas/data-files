@@ -2,51 +2,55 @@
 # The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
 
 @subsystem name	map name	filename
-sce00040  Pentose and glucuronate interconversions	Pentose and glucuronate interconversions	pentose_and_glucuronate_interconversions.svg
-sce00051  Fructose and mannose metabolism	Fructose and mannose metabolism	fructose_and_mannose_metabolism.svg
-sce00052  Galactose metabolism	Galactose metabolism	galactose_metabolism.svg
-sce00061  Fatty acid biosynthesis	Fatty acid biosynthesis	fatty_acid_biosynthesis.svg
-sce00100  Steroid biosynthesis	Steroid biosynthesis	steroid_biosynthesis.svg
-sce00130  Ubiquinone and other terpenoid-quinone biosynthesis	Ubiquinone and other terpenoid-quinone biosynthesis	ubiquinone_and_other_terpenoid_quinone_biosynthesis.svg
-sce00220  Arginine biosynthesis	Arginine biosynthesis	arginine_biosynthesis.svg
-sce00230  Purine metabolism	Purine metabolism	purine_metabolism.svg
-sce00240  Pyrimidine metabolism	Pyrimidine metabolism	pyrimidine_metabolism.svg
-sce00250  Alanine, aspartate and glutamate metabolism	Alanine, aspartate and glutamate metabolism	alanine_aspartate_and_glutamate_metabolism.svg
-sce00260  Glycine, serine and threonine metabolism	Glycine, serine and threonine metabolism	glycine_serine_and_threonine_metabolism.svg
-sce00270  Cysteine and methionine metabolism	Cysteine and methionine metabolism	cysteine_and_methionine_metabolism.svg
-sce00290  Valine, leucine and isoleucine biosynthesis	Valine, leucine and isoleucine biosynthesis	valine_leucine_and_isoleucine_metabolism.svg
-sce00300  Lysine biosynthesis	Lysine biosynthesis	lysine_metabolism.svg
-sce00330  Arginine and proline metabolism	Arginine and proline metabolism	arginine_and_proline_metabolism.svg
-sce00340  Histidine metabolism	Histidine metabolism	histidine_metabolism.svg
-sce00350  Tyrosine metabolism	Tyrosine metabolism	tyrosine_metabolism.svg
-sce00360  Phenylalanine metabolism	Phenylalanine metabolism	phenylalanine_metabolism.svg
-sce00380  Tryptophan metabolism	Tryptophan metabolism	tryptophan_metabolism.svg
-sce00400  Phenylalanine, tyrosine and tryptophan biosynthesis	Phenylalanine, tyrosine and tryptophan biosynthesis	phenylalanine_tyrosine_and_tryptophan_biosynthesis.svg
-sce00410  beta-Alanine metabolism	beta-Alanine metabolism	beta_alanine_metabolism.svg
-sce00480  Glutathione metabolism	Glutathione metabolism	glutathione_metabolism.svg
-sce00500  Starch and sucrose metabolism	Starch and sucrose metabolism	starch_and_sucrose_metabolism.svg
-sce00510  N-Glycan biosynthesis	N-Glycan biosynthesis	n_glycan_biosynthesis.svg
-sce00520  Amino sugar and nucleotide sugar metabolism	Amino sugar and nucleotide sugar metabolism	amino_sugar_and_nucleotide_sugar_metabolism.svg
-sce00561  Glycerolipid metabolism	Glycerolipid metabolism	glycerolipid_metabolism.svg
-sce00562  Inositol phosphate metabolism	Inositol phosphate metabolism	inositol_phosphate_metabolism.svg
-sce00563  Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	glycosylphosphatidylinositol_gpi_anchor_biosynthesis.svg
-sce00564  Glycerophospholipid metabolism	Glycerophospholipid metabolism	glycerolipid_metabolism_or_glycerophospholipid_metabolism.svg
-sce00600  Sphingolipid metabolism	Sphingolipid metabolism	sphingolipid_metabolism.svg
-sce00620  Pyruvate metabolism	Pyruvate metabolism	pyruvate_metabolism.svg
-sce00630  Glyoxylate and dicarboxylate metabolism	Glyoxylate and dicarboxylate metabolism	glyoxylate_and_dicarboxylate_metabolism.svg
-sce00640  Propanoate metabolism	Propanoate metabolism	propanoate_metabolism.svg
-sce00660  C5-Branched dibasic acid metabolism	C5-Branched dibasic acid metabolism	c5_branched_dibasic_acid_metabolism.svg
-sce00670  One carbon pool by folate	One carbon pool by folate	one_carbon_pool_by_folate.svg
-sce00730  Thiamine metabolism	Thiamine metabolism	thiamine_metabolism.svg
-sce00740  Riboflavin metabolism	Riboflavin metabolism	riboflavin_metabolism.svg
-sce00750  Vitamin B6 metabolism	Vitamin B6 metabolism	vitamin_b6_metabolism.svg
-sce00760  Nicotinate and nicotinamide metabolism	Nicotinate and nicotinamide metabolism	nicotinate_and_nicotinamide_metabolism.svg
-sce00770  Pantothenate and CoA biosynthesis	Pantothenate and CoA biosynthesis	pantothenate_and_coa_biosynthesis.svg
-sce00780  Biotin metabolism	Biotin metabolism	biotin_metabolism.svg
-sce00790  Folate biosynthesis	Folate biosynthesis	folate_biosynthesis.svg
-sce00860  Porphyrin and chlorophyll metabolism	Porphyrin and chlorophyll metabolism	porphyrin_and_chlorophyll_metabolism.svg
-sce00900  Terpenoid backbone biosynthesis	Terpenoid backbone biosynthesis	terpenoid_backbone_biosynthesis.svg
-sce00920  Sulfur metabolism	Energy metabolism	energy_metabolism.svg
-sce01040  Biosynthesis of unsaturated fatty acids	Biosynthesis of unsaturated fatty acids	biosynthesis_of_unsaturated_fatty_acids.svg
-sce01200  Carbon metabolism	Carbon metabolism	carbon_metabolism.svg
-sce04122  Sulfur relay system	Sulfur relay system	sulfur_relay_system.svg
+Pentose and glucuronate interconversions	Pentose and glucuronate interconversions	pentose_and_glucuronate_interconversions.svg
+Fructose and mannose metabolism	Fructose and mannose metabolism	fructose_and_mannose_metabolism.svg
+Galactose metabolism	Galactose metabolism	galactose_metabolism.svg
+Fatty acid biosynthesis	Fatty acid biosynthesis	fatty_acid_biosynthesis.svg
+Steroid biosynthesis	Steroid biosynthesis	steroid_biosynthesis.svg
+Ubiquinone and other terpenoid-quinone biosynthesis	Ubiquinone and other terpenoid-quinone biosynthesis	ubiquinone_and_other_terpenoid_quinone_biosynthesis.svg
+Arginine biosynthesis	Arginine biosynthesis	arginine_biosynthesis.svg
+Purine metabolism	Purine metabolism	purine_metabolism.svg
+Pyrimidine metabolism	Pyrimidine metabolism	pyrimidine_metabolism.svg
+Alanine, aspartate and glutamate metabolism	Alanine, aspartate and glutamate metabolism	alanine_aspartate_and_glutamate_metabolism.svg
+Glycine, serine and threonine metabolism	Glycine, serine and threonine metabolism	glycine_serine_and_threonine_metabolism.svg
+Cysteine and methionine metabolism	Cysteine and methionine metabolism	cysteine_and_methionine_metabolism.svg
+Valine, leucine and isoleucine metabolism	Valine, leucine and isoleucine metabolism	valine_leucine_and_isoleucine_metabolism.svg
+Lysine metabolism	Lysine metabolism	lysine_metabolism.svg
+Arginine and proline metabolism	Arginine and proline metabolism	arginine_and_proline_metabolism.svg
+Histidine metabolism	Histidine metabolism	histidine_metabolism.svg
+Tyrosine metabolism	Tyrosine metabolism	tyrosine_metabolism.svg
+Phenylalanine metabolism	Phenylalanine metabolism	phenylalanine_metabolism.svg
+Tryptophan metabolism	Tryptophan metabolism	tryptophan_metabolism.svg
+Phenylalanine, tyrosine and tryptophan biosynthesis	Phenylalanine, tyrosine and tryptophan biosynthesis	phenylalanine_tyrosine_and_tryptophan_biosynthesis.svg
+Beta-alanine metabolism	Beta-alanine metabolism	beta_alanine_metabolism.svg
+Glutathione metabolism	Glutathione metabolism	glutathione_metabolism.svg
+Starch and sucrose metabolism	Starch and sucrose metabolism	starch_and_sucrose_metabolism.svg
+N-glycan biosynthesis	N-glycan biosynthesis	n_glycan_biosynthesis.svg
+Amino sugar and nucleotide sugar metabolism	Amino sugar and nucleotide sugar metabolism	amino_sugar_and_nucleotide_sugar_metabolism.svg
+Glycerolipid metabolism	Glycerolipid metabolism	glycerolipid_metabolism.svg
+Inositol phosphate metabolism	Inositol phosphate metabolism	inositol_phosphate_metabolism.svg
+Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	Glycosylphosphatidylinositol (GPI)-anchor biosynthesis	glycosylphosphatidylinositol_gpi_anchor_biosynthesis.svg
+Glycerophospholipid metabolism	Glycerophospholipid metabolism	glycerolipid_metabolism_or_glycerophospholipid_metabolism.svg
+Sphingolipid metabolism	Sphingolipid metabolism	sphingolipid_metabolism.svg
+Pyruvate metabolism	Pyruvate metabolism	pyruvate_metabolism.svg
+Glyoxylate and dicarboxylate metabolism	Glyoxylate and dicarboxylate metabolism	glyoxylate_and_dicarboxylate_metabolism.svg
+Propanoate metabolism	Propanoate metabolism	propanoate_metabolism.svg
+C5-branched dibasic acid metabolism	C5-branched dibasic acid metabolism	c5_branched_dibasic_acid_metabolism.svg
+One carbon pool by folate	One carbon pool by folate	one_carbon_pool_by_folate.svg
+Thiamine metabolism	Thiamine metabolism	thiamine_metabolism.svg
+Riboflavin metabolism	Riboflavin metabolism	riboflavin_metabolism.svg
+Vitamin B6 metabolism	Vitamin B6 metabolism	vitamin_b6_metabolism.svg
+Nicotinate and nicotinamide metabolism	Nicotinate and nicotinamide metabolism	nicotinate_and_nicotinamide_metabolism.svg
+Pantothenate and CoA biosynthesis	Pantothenate and CoA biosynthesis	pantothenate_and_coa_biosynthesis.svg
+Biotin metabolism	Biotin metabolism	biotin_metabolism.svg
+Folate biosynthesis	Folate biosynthesis	folate_biosynthesis.svg
+Porphyrin and chlorophyll metabolism	Porphyrin and chlorophyll metabolism	porphyrin_and_chlorophyll_metabolism.svg
+Terpenoid backbone biosynthesis	Terpenoid backbone biosynthesis	terpenoid_backbone_biosynthesis.svg
+Sulfur metabolism	Energy metabolism	energy_metabolism.svg
+Biosynthesis of unsaturated fatty acids	Biosynthesis of unsaturated fatty acids	biosynthesis_of_unsaturated_fatty_acids.svg
+Alternate carbon metabolism	Alternate carbon metabolism	carbon_metabolism.svg
+Complex alcohol metabolism	Complex alcohol metabolism	complex_alcohol_metabolism.svg
+Lipoic acid metabolism	Lipoic acid metabolism	lipoic_acid_metabolism.svg
+Methylglyoxal metabolism	Methylglyoxal metabolism	methylglyoxal_metabolism.svg
+SLIME reaction	SLIME reaction	slime_reaction.svg
+Sphingoglycolipid metabolism	Sphingoglycolipid metabolism	sphingoglycolipid_metabolism.svg

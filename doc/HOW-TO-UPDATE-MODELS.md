@@ -66,6 +66,15 @@ It is strongly recommended to update one model a time.
    Note that a few failed tests are expected since some of the components might
    be removed in the updated models.
 
+- Check if all custom maps work as expected, especially for the Yeast-GEM. If
+  not, some of the custom maps might be integrated in the model files already.
+  If this is the case, modify accordingly.
+
 - If everything works as expected, commit the changes and work on the next
    model.
 
+Finally, update the timeline of model history by
+
+    ```
+    python ./utils/fetch_release_data.py
+    ```
