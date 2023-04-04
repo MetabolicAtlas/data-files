@@ -2,7 +2,7 @@
 
 In [Metabolic Atlas](https://github.com/MetabolicAtlas/MetabolicAtlas), the visualization of components, such as in the Map Viewer, can be customized using [Data overlay](https://metabolicatlas.org/documentation#Data-overlay).
 
-For each integrated model, Data overlay allows for multiple data types, such as Transcriptomics and Metabolomics. Each data type allows for multiple data sources, as well as the option for the user to upload and use their custom data on the fly. Each data source can contain multiple datasets, which contain values to be used to customize the visualization.
+For each integrated model, Data overlay allows for multiple overlay object types such as Genes, Reactions and Metabolites. Each overlay object type allows for multiple data sources, as well as the option for the user to upload and use their custom data on the fly. Each data source can contain multiple datasets, which contain values to be used to customize the visualization.
 
 ## Data source file requirements
 
@@ -20,6 +20,7 @@ For each integrated model, Data overlay allows for multiple data types, such as 
 | --------------- | -------------- | ------------- |
 | ENSG00000000419 | 0.456          | 0.697         |
 | ENSG00000000938 | 0.291          | 0.57          |
+
 
 ### The 0-1 range
 
@@ -57,13 +58,19 @@ As shown by the figure below, the histogram of scaled data is more evenly distri
 
 ![Histogram of HPA scaled data](./assets/img/hpaRNA-TPM-scaleddata-histogram.png)
 
+
+### Linear distribution of label colors
+
+When a dataset contains labels a simplay way to assign values is to split the range `[0,1]` in `N` parts with a fixed step size of `1/N`, where `N` is the number of labels. Then for each entry calculate `scaled_data = indexOf(label)/N`, where `label` is the label of the entry.
+
+
 ## Folder structure and naming conventions
 
 All data source files should be stored in the [data-files repo](https://github.com/MetabolicAtlas/data-files).
 
 Under each folder in [`/integrated-models`](https://github.com/MetabolicAtlas/data-files/tree/main/integrated-models), there should be a `dataOverlay` folder, for example: `data-files/integrated-models/Human-GEM/dataOverlay`. If not, it means the model currently does not have any data sources for data overlay and the `dataOverlay` folder should be added.
 
-Inside of the `dataOverlay` folder, there could be one or more folders, where the name of each folder should be the data type. Currently, the types `transcriptomics` and `metabolomics` are supported.
+Inside of the `dataOverlay` folder, there could be one or more folders, where the name of each folder should be the overlay object type. Currently, the types `gene`, `metabolite` and `reaction` are supported.
 
 Inside of a data type folder, there could be one or more data source files, such as `hpa.tsv`. There should also be an `index.tsv` file, which contains the metadata for all of the data sources in this folder. When adding a new data source, a new row should be added to the `index.tsv` file with the following values:
 
