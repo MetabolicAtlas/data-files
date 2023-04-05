@@ -61,7 +61,7 @@ As shown by the figure below, the histogram of scaled data is more evenly distri
 
 ### Linear distribution of label colors
 
-When a dataset contains labels a simplay way to assign values is to split the range `[0,1]` in `N` parts with a fixed step size of `1/N`, where `N` is the number of labels. Then for each entry calculate `scaled_data = indexOf(label)/N`, where `label` is the label of the entry.
+When a dataset contains labels a simple way to assign values is to split the range `[0,1]` in `N` parts with a fixed step size of `1/N`, where `N` is the number of labels. Then for each entry calculate `scaled_data = indexOf(label)/N`, where `label` is the label of the entry.
 
 
 ## Folder structure and naming conventions
