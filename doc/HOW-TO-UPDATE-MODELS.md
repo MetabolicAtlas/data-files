@@ -44,6 +44,11 @@ It is strongly recommended to update one model a time.
    folder `integrated-models/xyz-GEM` in the repo `data-files`, where `xyz-GEM`
    stands for the name of the target model. Note that for `Yeast-GEM`, you
    should rename `yeast-GEM.yml` to `yeastGEM.yml` after copying.
+   
+  For example you may run the following command for the Human-GEM model while you are at `data-files/integrated-models`:
+  ```
+  rsync -av ../../Human-GEM/model/*.yml ../../Human-GEM/model/*.tsv Human-GEM
+  ```
 
 - Modify or add the entities for `short_name`, `date`, and `version` if they
    are missing or not with the desired format. 
