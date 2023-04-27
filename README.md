@@ -5,7 +5,11 @@ The files in this repository are needed as input for [data-generation](https://g
 
 This repository relies on [Git LFS](https://git-lfs.github.com/). It is recommended that Git LFS is installed before cloning this repository. The `svg` and `zip` files are stored with Git LFS.
 
+## How to update
+
 For adding new a data source for data overlay, please refer to [this guide](DATA_OVERLAY.md).
+
+For updating models, please refer to [this guide](HOW-TO-UPDATE-MODELS.md).
 
 ## Licenses
 
