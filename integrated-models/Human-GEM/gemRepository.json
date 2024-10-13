@@ -223,5 +223,50 @@
     "PMID": "32209698",
     "count": {},
     "validation": {}
+  },
+  {
+    "id": "Human-GEM-1.15.0",
+    "externalParentId": [],
+    "releaseDate": "2023-05-09",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v1.15.0",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Human-GEM-1.16.0",
+    "externalParentId": [],
+    "releaseDate": "2023-06-19",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v1.16.0",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Human-GEM-1.17.0",
+    "externalParentId": [],
+    "releaseDate": "2023-09-30",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v1.17.0",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Human-GEM-1.18.0",
+    "externalParentId": [],
+    "releaseDate": "2023-12-08",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v1.18.0",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
+  },
+  {
+    "id": "Human-GEM-1.19.0",
+    "externalParentId": [],
+    "releaseDate": "2024-06-24",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v1.19.0",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
   }
 ]
