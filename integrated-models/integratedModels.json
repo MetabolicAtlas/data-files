@@ -1,5 +1,39 @@
 [
   {
+    "short_name": "Human-GEM",
+    "full_name": "Generic genome-scale metabolic model of Homo sapiens",
+    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of Human-GEM, which is a genome-scale model of the generic human cell. The objective of Human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
+    "version": "1.19.0",
+    "link": "https://github.com/SysBioChalmers/Human-GEM",
+    "chat_link": "https://github.com/SysBioChalmers/Human-GEM/discussions",
+    "authors": [
+      {
+        "given_name": "Jonathan",
+        "family_name": "Robinson",
+        "email": "jonrob@chalmers.se",
+        "organization": ""
+      },
+      {
+        "given_name": "Hao",
+        "family_name": "Wang",
+        "email": "hao.wang@chalmers.se",
+        "organization": ""
+      }
+    ],
+    "condition": "Generic metabolism",
+    "date": "2024-06-25",
+    "sample": {
+      "organism": "Homo sapiens",
+      "organ_system": null,
+      "tissue": null,
+      "cell_type": "Generic cell",
+      "cell_line": null
+    },
+    "ref": [
+      "32209698"
+    ]
+  },
+  {
     "short_name": "Yeast-GEM",
     "full_name": "Consensus genome-scale metabolic model of Saccharomyces cerevisiae",
     "description": "Consensus genome-scale metabolic model of Saccharomyces cerevisiae. It is the continuation of the legacy project yeastnet",
@@ -40,19 +74,13 @@
     ]
   },
   {
-    "short_name": "Human-GEM",
-    "full_name": "Generic genome-scale metabolic model of Homo sapiens",
-    "description": "Human genome-scale metabolic models are important tools for the study of human health and diseases, by providing a scaffold upon which different types of data can be analyzed. This is the latest version of Human-GEM, which is a genome-scale model of the generic human cell. The objective of Human-GEM is to serve as a community model for enabling integrative and mechanistic studies of human metabolism.",
-    "version": "1.19.0",
-    "link": "https://github.com/SysBioChalmers/Human-GEM",
-    "chat_link": "https://github.com/SysBioChalmers/Human-GEM/discussions",
+    "short_name": "Fruitfly-GEM",
+    "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
+    "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
+    "version": "1.7.0",
+    "link": "https://github.com/SysBioChalmers/Fruitfly-GEM",
+    "chat_link": "",
     "authors": [
-      {
-        "given_name": "Jonathan",
-        "family_name": "Robinson",
-        "email": "jonrob@chalmers.se",
-        "organization": ""
-      },
       {
         "given_name": "Hao",
         "family_name": "Wang",
@@ -61,16 +89,16 @@
       }
     ],
     "condition": "Generic metabolism",
-    "date": "2024-06-25",
+    "date": "2023-12-10",
     "sample": {
-      "organism": "Homo sapiens",
+      "organism": "Drosophila melanogaster",
       "organ_system": null,
       "tissue": null,
       "cell_type": "Generic cell",
       "cell_line": null
     },
     "ref": [
-      "32209698"
+      "34282017"
     ]
   },
   {
@@ -130,62 +158,6 @@
     ]
   },
   {
-    "short_name": "Zebrafish-GEM",
-    "full_name": "Generic genome-scale metabolic model of Danio rerio",
-    "description": "Zebrafish genome-scale metabolic models are important tools for the study of model animal zebrafish and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Zebrafish-GEM, which is a genome-scale model of the generic zebrafish cell. The objective of Zebrafish-GEM is to serve as a community model for enabling integrative and mechanistic studies of zebrafish and human metabolism.",
-    "version": "1.7.0",
-    "link": "https://github.com/SysBioChalmers/Zebrafish-GEM",
-    "chat_link": "",
-    "authors": [
-      {
-        "given_name": "Hao",
-        "family_name": "Wang",
-        "email": "hao.wang@chalmers.se",
-        "organization": ""
-      }
-    ],
-    "condition": "Generic metabolism",
-    "date": "2023-12-10",
-    "sample": {
-      "organism": "Danio rerio",
-      "organ_system": null,
-      "tissue": null,
-      "cell_type": "Generic cell",
-      "cell_line": null
-    },
-    "ref": [
-      "34282017"
-    ]
-  },
-  {
-    "short_name": "Fruitfly-GEM",
-    "full_name": "Generic genome-scale metabolic model of Drosophila melanogaster",
-    "description": "Fruit fly genome-scale metabolic models are important tools for the study of fruit fly and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Fruitfly-GEM, which is a genome-scale model of the generic fruit fly cell. The objective of Fruitfly-GEM is to serve as a community model for enabling integrative and mechanistic studies of fruit fly and human metabolism.",
-    "version": "1.7.0",
-    "link": "https://github.com/SysBioChalmers/Fruitfly-GEM",
-    "chat_link": "",
-    "authors": [
-      {
-        "given_name": "Hao",
-        "family_name": "Wang",
-        "email": "hao.wang@chalmers.se",
-        "organization": ""
-      }
-    ],
-    "condition": "Generic metabolism",
-    "date": "2023-12-10",
-    "sample": {
-      "organism": "Drosophila melanogaster",
-      "organ_system": null,
-      "tissue": null,
-      "cell_type": "Generic cell",
-      "cell_line": null
-    },
-    "ref": [
-      "34282017"
-    ]
-  },
-  {
     "short_name": "Worm-GEM",
     "full_name": "Generic genome-scale metabolic model of Caenorhabditis elegans",
     "description": "Worm genome-scale metabolic models are important tools for the study of worm and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Worm-GEM, which is a genome-scale model of the generic worm cell. The objective of Worm-GEM is to serve as a community model for enabling integrative and mechanistic studies of worm and human metabolism.",
@@ -204,6 +176,34 @@
     "date": "2023-12-10",
     "sample": {
       "organism": "Caenorhabditis elegans",
+      "organ_system": null,
+      "tissue": null,
+      "cell_type": "Generic cell",
+      "cell_line": null
+    },
+    "ref": [
+      "34282017"
+    ]
+  },
+  {
+    "short_name": "Zebrafish-GEM",
+    "full_name": "Generic genome-scale metabolic model of Danio rerio",
+    "description": "Zebrafish genome-scale metabolic models are important tools for the study of model animal zebrafish and human diseases, by providing a scaffold upon which different omics data can be analyzed. This is the latest version of Zebrafish-GEM, which is a genome-scale model of the generic zebrafish cell. The objective of Zebrafish-GEM is to serve as a community model for enabling integrative and mechanistic studies of zebrafish and human metabolism.",
+    "version": "1.7.0",
+    "link": "https://github.com/SysBioChalmers/Zebrafish-GEM",
+    "chat_link": "",
+    "authors": [
+      {
+        "given_name": "Hao",
+        "family_name": "Wang",
+        "email": "hao.wang@chalmers.se",
+        "organization": ""
+      }
+    ],
+    "condition": "Generic metabolism",
+    "date": "2023-12-10",
+    "sample": {
+      "organism": "Danio rerio",
       "organ_system": null,
       "tissue": null,
       "cell_type": "Generic cell",
