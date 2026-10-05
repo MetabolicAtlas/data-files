@@ -55,8 +55,16 @@ def omap_to_dict(node):
     return node
 
 
+def find_yaml(model_dir):
+    """The model YAML in a folder; data-generation takes any *.yml or *.yaml file."""
+    found = sorted(glob.glob(os.path.join(model_dir, "*.yml")) + glob.glob(os.path.join(model_dir, "*.yaml")))
+    if len(found) != 1:
+        raise SystemExit(f"expected one YAML file in {model_dir}, found {len(found)}")
+    return found[0]
+
+
 def load_model(model_dir, model):
-    path = os.path.join(model_dir, f"{model}.yml")
+    path = find_yaml(model_dir)
     with open(path) as f:
         raw = yaml.load(f, Loader=Loader)
     top = omap_to_dict(raw)
@@ -128,7 +136,7 @@ def read_csv(path):
 def read_tsv(path):
     """Rows of a model TSV as dicts; header and values with surrounding quotes removed."""
     with open(path, newline="") as f:
-        lines = [l.rstrip("\r\n") for l in f if l.strip() and not l.startswith(("#", "@"))]
+        lines = [line.rstrip("\r\n") for line in f if line.strip() and not line.startswith(("#", "@"))]
     header = [h.strip().strip('"') for h in lines[0].split("\t")]
     rows = []
     for line in lines[1:]:
@@ -508,7 +516,7 @@ def check_overlays(rep, model_dir, model, m, run, old_run):
             continue
         generated = os.path.join(out, component, name)
         rep.check(f"{component}/{name} was generated", os.path.exists(generated))
-        source_ids = {l.split("\t", 1)[0] for l in list(open(path))[1:]}
+        source_ids = {line.split("\t", 1)[0] for line in list(open(path))[1:]}
         in_model = source_ids & ids.get(component, set())
         new_count = sum(1 for _ in open(generated)) - 1 if os.path.exists(generated) else 0
         old_path = os.path.join(old_run.dir, "dataOverlay", model, component, name) if old_run else None
