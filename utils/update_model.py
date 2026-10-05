@@ -328,8 +328,9 @@ def main():
         fh.write("\n".join(head + new_block + rest))
     log(f"3. metaData: {', '.join(k for k, _ in merged)}")
     if re.search(r"^\s+- ec-code:", text, re.M) and not re.search(r"^\s+- eccodes:", text, re.M):
-        log("  WARNING: EC codes are under annotation/ec-code, which data-generation does not read;"
-            " the site will show no EC numbers")
+        if "ec-code" not in open(os.path.join(args.data_generation, "utils.js")).read():
+            log("  WARNING: EC codes are under annotation/ec-code, which this data-generation does not read;"
+                " the site will show no EC numbers")
 
     # 4. tables
     problems = []

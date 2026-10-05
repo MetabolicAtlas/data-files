@@ -366,7 +366,8 @@ def check_reactions(rep, m, run):
             "upperBound": as_text(r.get("upper_bound")),
             "geneRule": as_text(r.get("gene_reaction_rule")),
             "reversible": "true" if r.get("lower_bound") == -1000 else "false",
-            "ec": format_ec(r.get("eccodes")),
+            # RAVEN 3 and raven-toolbox write EC codes as annotation/ec-code
+            "ec": format_ec(r.get("eccodes") or (r.get("annotation") or {}).get("ec-code")),
             "references": as_text(r.get("references")),
         }
         for k, v in expected.items():
