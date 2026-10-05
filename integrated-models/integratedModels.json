@@ -37,7 +37,7 @@
     "short_name": "Yeast-GEM",
     "full_name": "Consensus genome-scale metabolic model of Saccharomyces cerevisiae",
     "description": "Consensus genome-scale metabolic model of Saccharomyces cerevisiae. It is the continuation of the legacy project yeastnet",
-    "version": "9.0.2",
+    "version": "9.1.0",
     "link": "https://github.com/SysBioChalmers/yeast-GEM",
     "chat_link": "https://gitter.im/SysBioChalmers/yeast-GEM",
     "authors": [
@@ -61,7 +61,7 @@
       }
     ],
     "condition": "Aerobic, glucose-limited, defined media",
-    "date": "2024-11-23",
+    "date": "2026-07-01",
     "sample": {
       "organism": "Saccharomyces cerevisiae, S288C",
       "organ_system": null,
