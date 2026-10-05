@@ -91,6 +91,7 @@ def main():
         "git clone https://github.com/MetabolicAtlas/data-generation",
         "git clone https://github.com/MetabolicAtlas/data-files",
         "(cd data-files && git lfs install && git lfs pull)",
+        "(cd data-generation && yarn install --frozen-lockfile)",
         "cd MetabolicAtlas && cp env-local.env.sample env-local.env   # set NEO4J_PASSWORD and POSTGRES_PASSWORD",
         "source proj.sh",
         "",
@@ -102,17 +103,18 @@ def main():
         f"git -C ../data-files switch {args.branch} && git -C ../data-files lfs pull",
         f"git -C ../data-generation switch {args.data_generation_ref}",
         "stop-stack",
-        "build-stack && start-stack",
-        "import-neo4j-db",
+        "build-stack && start-stack   # build-stack also imports the data into Neo4j",
         "ma-exec api yarn test 2>&1 | tee ../test-after.log",
-        "(cd frontend && npx cypress run)",
+        "xvfb-run npx --yes cypress run --project frontend   # without xvfb-run when a display is available",
         "```", "",
-        "Do not use `clean-stack`: it also deletes the GotEnzymes database. Some API tests fail before the update "
-        "too, so compare the two logs; only failures new in `test-after.log` matter. Each one is either an expected "
-        "change (a count, version or identifier that changed with this release) or a problem.", "",
+        "Do not run `import-neo4j-db` on a filled database (it times out) or `clean-stack` (it also deletes the "
+        "GotEnzymes database). Some API tests fail before the update too, so compare the two logs; only failures new "
+        "in `test-after.log` matter. Each one is either an expected change (a count, version or identifier that "
+        "changed with this release) or a problem. If every suite fails before any test runs, Jest cannot load "
+        "`node-fetch` 3; see part 2 of the guide.", "",
         f"Then, on http://localhost with {args.model} {args.version} selected:", "",
         "- [ ] API tests: no unexplained new failures (expected value changes go to a MetabolicAtlas pull request)",
-        "- [ ] Cypress tests pass",
+        "- [ ] Cypress: no failure that depends on the data (some tests are timing-dependent; rerun a failing spec)",
         "- [ ] The model list shows the new version and date",
         "- [ ] A reaction with several EC numbers shows each as its own link, and lists its references",
         "- [ ] A gene page shows its cross-references (Ensembl, UniProt, NCBI Gene, Protein Atlas)",

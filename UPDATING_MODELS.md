@@ -188,7 +188,7 @@ Commit an edit to `subsystemSVG.tsv` or `compartmentSVG.tsv` separately, e.g. `f
 
 This needs a machine with Docker and `docker compose`, with ports 80, 7474 and 7687 free. Run the commands in bash from the `MetabolicAtlas` folder.
 
-1. Create the environment file: `cp env-local.env.sample env-local.env`, and set `NEO4J_PASSWORD` and `POSTGRES_PASSWORD`.
+1. Create the environment file: `cp env-local.env.sample env-local.env`, and set `NEO4J_PASSWORD` and `POSTGRES_PASSWORD`. Run `yarn install --frozen-lockfile` in data-generation once before the first `build-stack`.
 2. **Baseline:** with data-files and data-generation on `main`:
     ```bash
     source proj.sh
@@ -199,12 +199,13 @@ This needs a machine with Docker and `docker compose`, with ports 80, 7474 and 7
     ```bash
     stop-stack
     build-stack && start-stack
-    import-neo4j-db
     ma-exec api yarn test 2>&1 | tee ../test-after.log
     ```
-    Do not use `clean-stack`: it also deletes the Docker volumes, including the GotEnzymes database.
+    `build-stack` runs data-generation and imports the result into the Neo4j image, so no separate import is needed. Do not run `import-neo4j-db` on a filled database: its first statement deletes everything in one transaction, which exceeds the 40 s transaction timeout and is rolled back. Do not use `clean-stack` either: it also deletes the Docker volumes, including the GotEnzymes database.
+
+    If every API test suite fails before any test runs, with an error from `node-fetch`, the test setup itself is broken, not the data. `node-fetch` 3 is ESM-only and the Jest configuration does not transform it. Run both test runs with a local Jest configuration that transforms `node-fetch`, and do not commit it.
 4. **Compare the logs.** The API tests contain fixed counts and identifiers that are not updated with every model release, so some tests fail before the update too. Only failures that appear in `test-after.log` and not in `test-before.log` matter. Each one is either an expected change (a count, a version or an identifier that changed with the release, see step 6 of part 1) or a problem to investigate. Update the expected values in the MetabolicAtlas tests in a separate pull request.
-5. **Cypress:** `cd frontend && npx cypress run`. The fixtures are stubbed API responses, so identifiers in them do not matter.
+5. **Cypress:** Cypress is not a dependency of the frontend, so run it with npx from the `MetabolicAtlas` folder: `npx --yes cypress run --project frontend`. Without a display (a server, WSL), it needs Xvfb (`xvfb-run npx --yes cypress run --project frontend`). The fixtures are stubbed API responses, so identifiers in them do not matter. Some tests wait only 4 s for the map viewer and fail now and then on any version; rerun a failing spec before treating it as a problem, and compare with a run on the baseline.
 6. **Look at the site** on `http://localhost`, with the updated model selected:
     - the model list shows the new version and date;
     - a reaction with several EC numbers shows each as its own link, and its references are listed;
