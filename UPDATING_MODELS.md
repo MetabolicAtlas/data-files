@@ -27,6 +27,23 @@ Exit status: `0` all hard checks passed, `1` data-generation or a hard check fai
 
 The script edits only `integrated-models/<Model>/` and `integrated-models/integratedModels.json`. Everything it generates goes to a work folder outside the repository (default `../model-update-work`).
 
+## Automated updates
+
+The workflow [`.github/workflows/update-model.yml`](.github/workflows/update-model.yml) runs part 1 in GitHub Actions and opens a pull request:
+
+- **Daily**, it updates Human-GEM to the next release after the integrated one, if there is one.
+- **Manually** (Actions tab, *Update integrated model*, *Run workflow*), it updates any model (`model`), to the next or a given release (`version`). You can also set the data-generation branch or tag to use (`data_generation_ref`).
+- **On `repository_dispatch`** of type `model-release` with `{"model": ..., "version": ...}`. A model repository's release workflow can send this, given a token with access to this repository.
+
+The workflow does nothing when the model is up to date, or when a branch for the same model and version already exists (one made by hand counts too). Otherwise it pushes `auto/update-<model>-<version>` and opens a pull request. The description shows the script output and the check summary, then the commands and the checklist for part 2. When the update stopped (status 2) or a check failed (status 1), the pull request is a draft and the workflow run fails. To finish such an update:
+
+1. Fix the files on the pull request's branch, as in step 4 or 5 below.
+2. Run the workflow manually with `continue_branch` set to that branch.
+
+The workflow checks the branch again without downloading, and updates the pull request. The full report is in the run's artifacts.
+
+Part 2 (the local deployment test) stays manual. Merge the pull request when its checklist is done.
+
 ## Prerequisites
 
 Clone the three repositories next to each other; the script and the Metabolic Atlas helper scripts expect this layout:

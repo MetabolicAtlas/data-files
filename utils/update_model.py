@@ -22,6 +22,7 @@ Steps, in order (see UPDATING_MODELS.md for the full procedure):
 Usage:
     python utils/update_model.py --model Human-GEM --version 2.0.0
     python utils/update_model.py --model Human-GEM --version 2.0.0 --keep-files
+    python utils/update_model.py --model Human-GEM --next-version   # print the next release, if any
 
 Exit status: 0 when every hard check passed, 1 when a check failed, 2 when the model
 files need a manual fix first.
@@ -77,6 +78,28 @@ def release_files(model, version):
             raise
         return tag, {item["name"]: item["download_url"] for item in listing if item["type"] == "file"}
     fail(f"no tag v{version} or {version} in {OWNER}/{model}")
+
+
+def releases(model):
+    """Published releases of the model, oldest first, as returned by fetch_release_data."""
+    sys.path.insert(0, HERE)
+    import fetch_release_data
+    from github import Github
+    return fetch_release_data.get_release_data(f"{OWNER}/{model}", Github(os.environ.get("GH_TOKEN")),
+                                               is_add_version=True)
+
+
+def integrated_version(model):
+    index = json.load(open(os.path.join(DATA_FILES, "integrated-models", "integratedModels.json")))
+    return next(e["version"] for e in index if e["short_name"] == model)
+
+
+def next_version(model):
+    """The oldest release newer than the integrated version, or None; releases are taken one at a time."""
+    from packaging.version import Version
+    current = Version(integrated_version(model))
+    newer = sorted((Version(r["version"]) for r in releases(model) if Version(r["version"]) > current))
+    return str(newer[0]) if newer else None
 
 
 # ----------------------------------------------------------------------------- metaData
@@ -191,7 +214,9 @@ def preflight(args, model_dir):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="folder in integrated-models and repository name, e.g. Human-GEM")
-    ap.add_argument("--version", required=True, help="release to update to, e.g. 2.0.0")
+    ap.add_argument("--version", help="release to update to, e.g. 2.0.0")
+    ap.add_argument("--next-version", action="store_true",
+                    help="only print the oldest release newer than the integrated version (nothing if up to date)")
     ap.add_argument("--data-generation", default=os.path.join(os.path.dirname(DATA_FILES), "data-generation"),
                     help="data-generation checkout (default: next to data-files)")
     ap.add_argument("--work-dir", default=os.path.join(os.path.dirname(DATA_FILES), "model-update-work"),
@@ -200,7 +225,15 @@ def main():
                     help="do not download; use the model files in data-files as they are (after a manual fix)")
     ap.add_argument("--date", help="date to use instead of the one in the release YAML (YYYY-MM-DD)")
     ap.add_argument("--skip-timeline", action="store_true", help="leave gemRepository.json unchanged")
+    ap.add_argument("--baseline-data-files",
+                    help="generate the baseline from this data-files checkout (e.g. of main) instead of the "
+                         "current files; needed with --keep-files when no earlier baseline exists")
     args = ap.parse_args()
+    if args.next_version:
+        print(next_version(args.model) or "")
+        return
+    if not args.version:
+        ap.error("--version is required")
     args.data_generation = os.path.abspath(args.data_generation)
     work = os.path.abspath(args.work_dir)
     model_dir = os.path.join(DATA_FILES, "integrated-models", args.model)
@@ -210,14 +243,24 @@ def main():
 
     # 1. baseline; the marker file ties it to this update, so a rerun with --keep-files finds it
     marker = os.path.join(work, f"{args.model}-{args.version}.baseline")
-    if os.path.exists(marker):
+    if args.baseline_data_files:
+        source = os.path.abspath(args.baseline_data_files)
+        index = json.load(open(os.path.join(source, "integrated-models", "integratedModels.json")))
+        old_version = next(e["version"] for e in index if e["short_name"] == args.model)
+        baseline = os.path.join(work, f"{args.model}-{old_version}")
+        log(f"1. Baseline: generating data from {source} ({old_version})")
+        run_generation(args.data_generation, baseline, source)
+        shutil.copytree(os.path.join(source, "integrated-models", args.model), os.path.join(baseline, "model-files"))
+        os.makedirs(work, exist_ok=True)
+        with open(marker, "w") as fh:
+            fh.write(baseline + "\n")
+    elif os.path.exists(marker):
         baseline = open(marker).read().strip()
         log(f"1. Baseline: reusing {baseline}")
     else:
         if args.keep_files:
             fail(f"no baseline for this update in {work}; run once without --keep-files on the unmodified files")
-        index = json.load(open(os.path.join(DATA_FILES, "integrated-models", "integratedModels.json")))
-        old_version = next(e["version"] for e in index if e["short_name"] == args.model)
+        old_version = integrated_version(args.model)
         baseline = os.path.join(work, f"{args.model}-{old_version}")
         log(f"1. Baseline: generating data from the current files ({old_version})")
         run_generation(args.data_generation, baseline, DATA_FILES)
@@ -298,15 +341,14 @@ def main():
     if args.skip_timeline:
         log("6. Timeline: skipped")
     else:
-        sys.path.insert(0, HERE)
-        from github import Github  # noqa: E402
-        import fetch_release_data  # noqa: E402
-        releases = fetch_release_data.get_release_data(f"{OWNER}/{args.model}", Github(os.environ.get("GH_TOKEN")))
-        ids = [r["id"] for r in releases]
+        found = releases(args.model)
+        for r in found:
+            r.pop("version", None)
+        ids = [r["id"] for r in found]
         wanted = f"{args.model}-{version}"
         if wanted not in ids:
             fail(f"release {wanted} not found on GitHub (found up to {ids[-1] if ids else 'none'})")
-        timeline = releases[: ids.index(wanted) + 1]
+        timeline = found[: ids.index(wanted) + 1]
         with open(os.path.join(model_dir, "gemRepository.json"), "w", encoding="utf-8") as fh:
             fh.write(json.dumps(timeline, indent=2))
         log(f"6. Timeline: {len(timeline)} releases, last {wanted}")
