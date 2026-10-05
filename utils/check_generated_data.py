@@ -137,6 +137,8 @@ def read_tsv(path):
     """Rows of a model TSV as dicts; header and values with surrounding quotes removed."""
     with open(path, newline="") as f:
         lines = [line.rstrip("\r\n") for line in f if line.strip() and not line.startswith(("#", "@"))]
+    if not lines:
+        return [], []
     header = [h.strip().strip('"') for h in lines[0].split("\t")]
     rows = []
     for line in lines[1:]:
@@ -377,7 +379,9 @@ def check_reactions(rep, m, run):
     expected = set()
     for i, r in rxns.items():
         for met, coef in (r.get("metabolites") or {}).items():
-            expected.add((i, met, "in" if coef < 0 else "out", abs(float(coef))))
+            # PyYAML (YAML 1.1) reads exponents without a decimal point, e.g. -1e-06, as text
+            coef = float(coef)
+            expected.add((i, met, "in" if coef < 0 else "out", abs(coef)))
     actual = {(r["reactionId"], r["compartmentalizedMetaboliteId"], "in", float(r["stoichiometry"]))
               for r in run.csv("compartmentalizedMetaboliteReactions")}
     actual |= {(r["reactionId"], r["compartmentalizedMetaboliteId"], "out", float(r["stoichiometry"]))
@@ -406,6 +410,10 @@ def check_xrefs(rep, model_dir, m, run, identifiers):
     for component, filename in (("gene", "genes.tsv"), ("reaction", "reactions.tsv"),
                                 ("metabolite", "metabolites.tsv")):
         header, rows = read_tsv(os.path.join(model_dir, filename))
+        if not header:
+            rep.compare_sets(f"{component} cross-reference links (no {filename} for this model)", set(),
+                             run.xrefs(component))
+            continue
         # data-generation reads columns by position, so a short or long row shifts its values
         ragged = [r[header[0]] for r in rows if len(r) != len(header) or None in r]
         rep.check(f"{filename}: every row has {len(header)} columns", not ragged,
@@ -461,6 +469,11 @@ def check_maps(rep, model_dir, data_files, model, m, run):
     for component, kind in (("compartment", "compartmentSvgMaps"), ("subsystem", "subsystemSvgMaps"),
                             ("custom", "customSvgMaps")):
         rows = read_map_tsv(os.path.join(model_dir, f"{component}SVG.tsv"))
+        if component == "custom":
+            # custom maps (map name, filename) stand alone: a map node, linked to no component
+            rep.compare_sets("custom maps", {r[1] for r in rows if len(r) >= 2},
+                             {n["filename"] for n in svg_nodes.values()} & {r[1] for r in rows if len(r) >= 2})
+            continue
         expected = {(idfy(r[0]), r[2][:-4]) for r in rows if len(r) >= 3}
         key = f"{component}Id"
         rep.compare_sets(f"{component} map links", expected,

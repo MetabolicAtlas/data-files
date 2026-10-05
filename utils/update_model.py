@@ -166,11 +166,21 @@ def unquote(value):
 
 # ----------------------------------------------------------------------------- tables
 
+def table_lines(path):
+    with open(path, newline="", encoding="utf-8") as fh:
+        return [(n, row) for n, row in enumerate(csv.reader(fh, delimiter="\t"), 1)
+                if row and not row[0].startswith(("#", "@"))]
+
+
+def has_rows(path):
+    return bool(table_lines(path))
+
+
 def ragged_rows(path):
     """(line number, id, fields, header fields) of rows whose field count differs from the header."""
-    with open(path, newline="", encoding="utf-8") as fh:
-        lines = [(n, row) for n, row in enumerate(csv.reader(fh, delimiter="\t"), 1)
-                 if row and not row[0].startswith(("#", "@"))]
+    lines = table_lines(path)
+    if not lines:
+        return []
     header = lines[0][1]
     return [(n, row[0], len(row), len(header)) for n, row in lines[1:] if len(row) != len(header)]
 
@@ -281,14 +291,23 @@ def main():
         sources = [n for n in files if n.endswith((".yml", ".yaml"))]
         if len(sources) != 1:
             fail(f"expected one YAML file in model/ at {tag}, found {sources}")
-        log(f"2. Download: {tag} {sources[0]} -> {os.path.basename(target_yaml)}, {', '.join(TABLES)}")
-        with open(target_yaml, "wb") as fh:
-            fh.write(github_get(files[sources[0]]))
+        # everything is downloaded before anything is written, so a failure leaves the folder unchanged
+        downloads = {target_yaml: github_get(files[sources[0]])}
+        kept = []
         for name in TABLES:
-            if name not in files:
-                fail(f"{name} is missing in model/ at {tag}")
-            with open(os.path.join(model_dir, name), "wb") as fh:
-                fh.write(github_get(files[name]))
+            path = os.path.join(model_dir, name)
+            if name in files:
+                downloads[path] = github_get(files[name])
+            elif os.path.exists(path) and not has_rows(path):
+                kept.append(name)  # the model has no such table; the empty placeholder stays
+            else:
+                fail(f"{name} is missing in model/ at {tag}, but integrated-models/{args.model}/{name} has content")
+        for path, content in downloads.items():
+            with open(path, "wb") as fh:
+                fh.write(content)
+        log(f"2. Download: {tag} {sources[0]} -> {os.path.basename(target_yaml)}"
+            + "".join(f", {n}" for n in TABLES if n not in kept)
+            + (f" (no {', '.join(kept)} in the release; empty placeholder kept)" if kept else ""))
 
     # 3. metaData
     text = open(target_yaml, encoding="utf-8").read()
