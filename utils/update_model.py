@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+"""Update one integrated model in data-files to a released version, and check the result.
+
+Steps, in order (see UPDATING_MODELS.md for the full procedure):
+  1. Baseline: run data-generation on the files as they are, and keep a copy of the
+     current model files, so the new version can be compared with the old one.
+  2. Download the model files of the release (model/*.yml, genes.tsv,
+     metabolites.tsv, reactions.tsv) from GitHub into integrated-models/<model>.
+     The existing YAML file name is kept (e.g. yeastGEM.yml).
+  3. Prepare metaData for data-generation: a plain mapping (RAVEN 3 writes an
+     !!omap), short_name set to the folder name, version and date quoted, and fields
+     the previous copy had but the release lacks (short_name, full_name, authors,
+     github, description, ...) carried over.
+  4. Check that every TSV row has as many fields as its header. data-generation reads
+     the tables by position, so a short row misplaces values. Problems are listed
+     and the script stops: fix the rows by hand and rerun with --keep-files.
+  5. Set version and date in integratedModels.json.
+  6. Add the model's releases up to this version to its gemRepository.json.
+  7. Run data-generation on the updated files, then check_generated_data.py, which
+     compares the output with the model files and with the baseline.
+
+Usage:
+    python utils/update_model.py --model Human-GEM --version 2.0.0
+    python utils/update_model.py --model Human-GEM --version 2.0.0 --keep-files
+
+Exit status: 0 when every hard check passed, 1 when a check failed, 2 when the model
+files need a manual fix first.
+"""
+
+import argparse
+import csv
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_FILES = os.path.dirname(HERE)
+TABLES = ("genes.tsv", "metabolites.tsv", "reactions.tsv")
+OWNER = "SysBioChalmers"
+
+
+def log(message):
+    print(message, flush=True)
+
+
+def fail(message, status=2):
+    print(f"\nSTOP: {message}", file=sys.stderr, flush=True)
+    sys.exit(status)
+
+
+# ----------------------------------------------------------------------------- GitHub
+
+def github_get(url):
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "data-files-update-model"}
+    token = os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as response:
+        return response.read()
+
+
+def release_files(model, version):
+    """{file name: download url} of the model folder at the release tag."""
+    for tag in (f"v{version}", version):
+        url = f"https://api.github.com/repos/{OWNER}/{model}/contents/model?ref={tag}"
+        try:
+            listing = json.loads(github_get(url))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            raise
+        return tag, {item["name"]: item["download_url"] for item in listing if item["type"] == "file"}
+    fail(f"no tag v{version} or {version} in {OWNER}/{model}")
+
+
+# ----------------------------------------------------------------------------- metaData
+
+def split_metadata(text):
+    """(lines before, metaData lines, lines after); metaData is the '- metaData:' item."""
+    lines = text.split("\n")
+    start = next((i for i, line in enumerate(lines) if re.match(r"^- metaData:", line)), None)
+    if start is None:
+        fail("no '- metaData:' entry at the top level of the YAML file")
+    end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("- "))
+    return lines[:start], lines[start:end], lines[end:]
+
+
+def parse_metadata(block):
+    """Ordered (key, raw value) pairs of a metaData block in either RAVEN layout:
+    RAVEN 2 '    key: value' under '- metaData:'; RAVEN 3 '  - key: value' under '- metaData: !!omap'."""
+    pairs = []
+    for line in block[1:]:
+        if not line.strip():
+            continue
+        m = re.match(r"^(?:    |  - )([A-Za-z_][A-Za-z0-9_]*):(?: (.*))?$", line)
+        if not m:
+            fail(f"cannot read this metaData line: {line!r}")
+        pairs.append((m.group(1), m.group(2) or '""'))
+    return pairs
+
+
+def quoted(value):
+    value = value.strip()
+    if value.startswith(('"', "'")):
+        return value
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def merge_metadata(new_pairs, old_pairs, model, date=None):
+    """Release metaData plus the fields only the previous copy had. Fields that came
+    before 'version' in the previous copy go first, the others after 'date'."""
+    new = dict(new_pairs)
+    keys = [k for k, _ in new_pairs]
+    old_keys = [k for k, _ in old_pairs]
+    cut = old_keys.index("version") if "version" in old_keys else len(old_keys)
+    before = [(k, v) for k, v in old_pairs[:cut] if k not in new]
+    after = [(k, v) for k, v in old_pairs[cut:] if k not in new and k not in ("version", "date")]
+    merged = before + [(k, new[k]) for k in keys]
+    anchor = max((i for i, (k, _) in enumerate(merged) if k in ("version", "date")), default=len(merged) - 1)
+    merged = merged[: anchor + 1] + after + merged[anchor + 1:]
+    result = []
+    for k, v in merged:
+        if k == "short_name":
+            v = f'"{model}"'
+        elif k in ("version", "date"):
+            v = quoted(f'"{date}"' if k == "date" and date else v)
+        result.append((k, v))
+    if "short_name" not in dict(result):
+        result.insert(0, ("short_name", f'"{model}"'))
+    return result
+
+
+def unquote(value):
+    value = value.strip()
+    return value[1:-1] if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'" else value
+
+
+# ----------------------------------------------------------------------------- tables
+
+def ragged_rows(path):
+    """(line number, id, fields, header fields) of rows whose field count differs from the header."""
+    with open(path, newline="", encoding="utf-8") as fh:
+        lines = [(n, row) for n, row in enumerate(csv.reader(fh, delimiter="\t"), 1)
+                 if row and not row[0].startswith(("#", "@"))]
+    header = lines[0][1]
+    return [(n, row[0], len(row), len(header)) for n, row in lines[1:] if len(row) != len(header)]
+
+
+# ----------------------------------------------------------------------------- steps
+
+def run_generation(data_generation, run_dir, data_files):
+    if os.path.exists(run_dir):
+        shutil.rmtree(run_dir)
+    os.makedirs(run_dir)
+    log(f"  data-generation -> {run_dir}")
+    with open(os.path.join(run_dir, "generate.log"), "w") as out:
+        status = subprocess.run(["node", os.path.join(data_generation, "index.js"), data_files],
+                                cwd=run_dir, stdout=out, stderr=subprocess.STDOUT).returncode
+    if status != 0:
+        tail = open(os.path.join(run_dir, "generate.log")).read()[-3000:]
+        fail(f"data-generation failed (log in {run_dir}/generate.log):\n{tail}", 1)
+
+
+def preflight(args, model_dir):
+    if not os.path.isdir(model_dir):
+        fail(f"{model_dir} does not exist; this script updates a model that is already integrated")
+    if shutil.which("node") is None:
+        fail("node is not on PATH (on Vera: module load nodejs/20.13.1-GCCcore-13.3.0)")
+    if not os.path.isdir(os.path.join(args.data_generation, "node_modules")):
+        fail(f"run 'yarn install --frozen-lockfile' in {args.data_generation} first")
+    utils_js = open(os.path.join(args.data_generation, "utils.js")).read()
+    if "formatEcCodes" not in utils_js:
+        log("  WARNING: this data-generation does not normalise EC codes or unquote TSV headers;"
+            " use a version with those fixes")
+    svgs = glob.glob(os.path.join(DATA_FILES, "svg", args.model, "*.svg"))
+    if svgs and open(svgs[0], "rb").read(24) == b"version https://git-lfs":
+        fail("the SVG maps are Git LFS pointers; run 'git lfs pull' in data-files")
+    if not args.keep_files:
+        changed = subprocess.run(["git", "status", "--porcelain", "--", model_dir], cwd=DATA_FILES,
+                                 capture_output=True, text=True).stdout.strip()
+        if changed:
+            fail(f"{model_dir} has uncommitted changes; commit or discard them, or rerun with --keep-files")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--model", required=True, help="folder in integrated-models and repository name, e.g. Human-GEM")
+    ap.add_argument("--version", required=True, help="release to update to, e.g. 2.0.0")
+    ap.add_argument("--data-generation", default=os.path.join(os.path.dirname(DATA_FILES), "data-generation"),
+                    help="data-generation checkout (default: next to data-files)")
+    ap.add_argument("--work-dir", default=os.path.join(os.path.dirname(DATA_FILES), "model-update-work"),
+                    help="where the baseline and generated data go (default: next to data-files)")
+    ap.add_argument("--keep-files", action="store_true",
+                    help="do not download; use the model files in data-files as they are (after a manual fix)")
+    ap.add_argument("--date", help="date to use instead of the one in the release YAML (YYYY-MM-DD)")
+    ap.add_argument("--skip-timeline", action="store_true", help="leave gemRepository.json unchanged")
+    args = ap.parse_args()
+    args.data_generation = os.path.abspath(args.data_generation)
+    work = os.path.abspath(args.work_dir)
+    model_dir = os.path.join(DATA_FILES, "integrated-models", args.model)
+
+    log(f"Updating {args.model} to {args.version}")
+    preflight(args, model_dir)
+
+    # 1. baseline; the marker file ties it to this update, so a rerun with --keep-files finds it
+    marker = os.path.join(work, f"{args.model}-{args.version}.baseline")
+    if os.path.exists(marker):
+        baseline = open(marker).read().strip()
+        log(f"1. Baseline: reusing {baseline}")
+    else:
+        if args.keep_files:
+            fail(f"no baseline for this update in {work}; run once without --keep-files on the unmodified files")
+        index = json.load(open(os.path.join(DATA_FILES, "integrated-models", "integratedModels.json")))
+        old_version = next(e["version"] for e in index if e["short_name"] == args.model)
+        baseline = os.path.join(work, f"{args.model}-{old_version}")
+        log(f"1. Baseline: generating data from the current files ({old_version})")
+        run_generation(args.data_generation, baseline, DATA_FILES)
+        shutil.copytree(model_dir, os.path.join(baseline, "model-files"))
+        with open(marker, "w") as fh:
+            fh.write(baseline + "\n")
+    old_yaml = glob.glob(os.path.join(baseline, "model-files", "*.yml"))[0]
+
+    # 2. download
+    yaml_files = glob.glob(os.path.join(model_dir, "*.yml"))
+    if len(yaml_files) != 1:
+        fail(f"expected one .yml file in {model_dir}")
+    target_yaml = yaml_files[0]
+    if args.keep_files:
+        log("2. Download: skipped (--keep-files)")
+    else:
+        tag, files = release_files(args.model, args.version)
+        sources = [n for n in files if n.endswith((".yml", ".yaml"))]
+        if len(sources) != 1:
+            fail(f"expected one YAML file in model/ at {tag}, found {sources}")
+        log(f"2. Download: {tag} {sources[0]} -> {os.path.basename(target_yaml)}, {', '.join(TABLES)}")
+        with open(target_yaml, "wb") as fh:
+            fh.write(github_get(files[sources[0]]))
+        for name in TABLES:
+            if name not in files:
+                fail(f"{name} is missing in model/ at {tag}")
+            with open(os.path.join(model_dir, name), "wb") as fh:
+                fh.write(github_get(files[name]))
+
+    # 3. metaData
+    text = open(target_yaml, encoding="utf-8").read()
+    head, block, rest = split_metadata(text)
+    pairs = parse_metadata(block)
+    _, old_block, _ = split_metadata(open(old_yaml, encoding="utf-8").read())
+    merged = merge_metadata(pairs, parse_metadata(old_block), args.model, args.date)
+    version = unquote(dict(merged)["version"])
+    date = unquote(dict(merged).get("date", '""'))
+    if version != args.version:
+        fail(f"the YAML says version {version}, not {args.version}")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        fail(f"metaData date {date!r} is not YYYY-MM-DD; pass --date")
+    new_block = ["- metaData:"] + [f"    {k}: {v}" for k, v in merged]
+    with open(target_yaml, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(head + new_block + rest))
+    log(f"3. metaData: {', '.join(k for k, _ in merged)}")
+    if re.search(r"^\s+- ec-code:", text, re.M) and not re.search(r"^\s+- eccodes:", text, re.M):
+        log("  WARNING: EC codes are under annotation/ec-code, which data-generation does not read;"
+            " the site will show no EC numbers")
+
+    # 4. tables
+    problems = []
+    for name in TABLES:
+        for line, row_id, n, expected in ragged_rows(os.path.join(model_dir, name)):
+            problems.append(f"  {name}:{line} {row_id}: {n} fields, header has {expected}")
+    if problems:
+        fail("rows with the wrong number of fields (fix them in integrated-models/"
+             f"{args.model}, check the next release for a corrected row, then rerun with --keep-files):\n"
+             + "\n".join(problems))
+    log("4. Tables: every row has as many fields as its header")
+
+    # 5. integratedModels.json
+    index_path = os.path.join(DATA_FILES, "integrated-models", "integratedModels.json")
+    index_text = open(index_path, encoding="utf-8").read()
+    entries = json.loads(index_text)
+    position = next((i for i, e in enumerate(entries) if e["short_name"] == args.model), None)
+    if position is None:
+        fail(f"{args.model} is not in integratedModels.json")
+    # edit in place, so the rest of the file keeps its layout
+    pattern = re.compile(r'(\{\s*"short_name":\s*"' + re.escape(args.model) + r'".*?\n  \})', re.S)
+    entry_text = pattern.search(index_text).group(1)
+    updated = re.sub(r'"version":\s*"[^"]*"', f'"version": "{version}"', entry_text, count=1)
+    updated = re.sub(r'"date":\s*"[^"]*"', f'"date": "{date}"', updated, count=1)
+    with open(index_path, "w", encoding="utf-8") as fh:
+        fh.write(index_text.replace(entry_text, updated, 1))
+    log(f"5. integratedModels.json: version {version}, date {date}")
+
+    # 6. timeline
+    if args.skip_timeline:
+        log("6. Timeline: skipped")
+    else:
+        sys.path.insert(0, HERE)
+        from github import Github  # noqa: E402
+        import fetch_release_data  # noqa: E402
+        releases = fetch_release_data.get_release_data(f"{OWNER}/{args.model}", Github(os.environ.get("GH_TOKEN")))
+        ids = [r["id"] for r in releases]
+        wanted = f"{args.model}-{version}"
+        if wanted not in ids:
+            fail(f"release {wanted} not found on GitHub (found up to {ids[-1] if ids else 'none'})")
+        timeline = releases[: ids.index(wanted) + 1]
+        with open(os.path.join(model_dir, "gemRepository.json"), "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(timeline, indent=2))
+        log(f"6. Timeline: {len(timeline)} releases, last {wanted}")
+
+    # 7. generate and check
+    log("7. Generating and checking the new version")
+    run_dir = os.path.join(work, f"{args.model}-{version}")
+    run_generation(args.data_generation, run_dir, DATA_FILES)
+    report = os.path.join(run_dir, "check_report.md")
+    check = [sys.executable, os.path.join(HERE, "check_generated_data.py"), "--model", args.model,
+             "--data-files", DATA_FILES, "--data-generation", args.data_generation, "--new", run_dir,
+             "--old", baseline, "--old-model-dir", os.path.join(baseline, "model-files"), "--report", report]
+    metabolicatlas = os.path.join(os.path.dirname(DATA_FILES), "MetabolicAtlas")
+    if os.path.isdir(metabolicatlas):
+        check += ["--metabolicatlas", metabolicatlas]
+    status = subprocess.run(check).returncode
+    log(f"\nReport: {report}")
+    log("Next: read the report, commit the changes in data-files, and run the Docker checks (UPDATING_MODELS.md).")
+    sys.exit(1 if status else 0)
+
+
+if __name__ == "__main__":
+    main()

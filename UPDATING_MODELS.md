@@ -1,0 +1,211 @@
+# Updating an integrated model
+
+This guide updates one integrated model (for example Human-GEM 1.19.0 to 2.0.0) in this repository, and checks the result before it is deployed. It is written so that a person or an automated agent can follow it step by step.
+
+Update one model at a time, and one release at a time if several releases have to be caught up.
+
+The work has two parts:
+
+1. **Update and check the data files.** `utils/update_model.py` does this. It needs no Docker and runs anywhere with Python and Node.js, including a cluster node.
+2. **Test a local deployment.** This needs Docker. Build the Metabolic Atlas stack with the new files, run its tests and look at the site.
+
+## What the script does
+
+`utils/update_model.py --model <Model> --version <x.y.z>` runs these steps and stops at the first one that needs a person:
+
+| Step | What happens | Stops when |
+| --- | --- | --- |
+| 1. Baseline | Runs data-generation on the current files and keeps a copy of the current model files, so the new version can be compared with the old one | data-generation fails |
+| 2. Download | Downloads `model/*.yml`, `genes.tsv`, `metabolites.tsv` and `reactions.tsv` of the release tag from `SysBioChalmers/<Model>` into `integrated-models/<Model>`, keeping the existing YAML file name (e.g. `yeastGEM.yml`) | the tag or a file is missing |
+| 3. metaData | Writes `metaData` as a plain mapping (RAVEN 3 writes an `!!omap`, which data-generation cannot read), sets `short_name` to the folder name, quotes `version` and `date`, and carries over fields the previous copy had but the release lacks (`full_name`, `description`, `github`, `authors`, ...) | the version in the YAML differs from `--version`, or the date is not `YYYY-MM-DD` |
+| 4. Tables | Checks that every row in the three TSV files has as many fields as the header | any row has the wrong number of fields |
+| 5. Index | Sets `version` and `date` of the model in `integrated-models/integratedModels.json` | the model is not in the index |
+| 6. Timeline | Writes the model's GitHub releases, up to this version, to `integrated-models/<Model>/gemRepository.json` | the release is not on GitHub |
+| 7. Generate and check | Runs data-generation on the updated files, then `utils/check_generated_data.py`, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
+
+Exit status: `0` all hard checks passed, `1` data-generation or a hard check failed, `2` a manual fix is needed first.
+
+The script edits only `integrated-models/<Model>/` and `integrated-models/integratedModels.json`. Everything it generates goes to a work folder outside the repository (default `../model-update-work`).
+
+## Prerequisites
+
+Clone the three repositories next to each other; the script and the Metabolic Atlas helper scripts expect this layout:
+
+```
+work/
+├── data-files/        this repository, with Git LFS files pulled
+├── data-generation/   MetabolicAtlas/data-generation
+└── MetabolicAtlas/    MetabolicAtlas/MetabolicAtlas (optional for part 1; used to list stale test identifiers)
+```
+
+```bash
+git clone https://github.com/MetabolicAtlas/data-files
+git clone https://github.com/MetabolicAtlas/data-generation
+git clone https://github.com/MetabolicAtlas/MetabolicAtlas
+(cd data-files && git lfs install && git lfs pull)
+(cd data-generation && yarn install --frozen-lockfile)
+pip install -r data-files/utils/requirements.txt
+```
+
+You need:
+
+- Node.js 12 or later and yarn 1.22 or later. On a cluster with environment modules, for example `module load nodejs`.
+- Python 3.9 or later with the packages in `utils/requirements.txt`. The script uses `PyYAML` and `PyGithub`.
+- Git LFS. Without `git lfs pull` the SVG maps are pointer files; the script stops and says so.
+- A data-generation version that writes EC codes as `; `-separated strings and reads quoted TSV headers. The script warns if it does not.
+- Optionally `GH_TOKEN`, a GitHub token with read access. Without it GitHub allows 60 API calls an hour, which is enough for one model.
+
+## Part 1: update and check the data files
+
+### 1. Find the version to update to
+
+```bash
+cd data-files
+python utils/fetch_release_data.py -s
+```
+
+This lists every integrated model with a newer release, e.g. `Human-GEM can be updated: 1.19.0 => 2.1.0`. Releases in between should be done one at a time, oldest first.
+
+### 2. Make a branch
+
+```bash
+git switch main && git pull
+git switch -c chore/update-human-gem-2.0.0
+```
+
+### 3. Run the script
+
+```bash
+python utils/update_model.py --model Human-GEM --version 2.0.0
+```
+
+Use the repository name from `SysBioChalmers` for `--model`; it is also the folder name in `integrated-models`. The run takes about a minute; data-generation itself takes about 10 seconds.
+
+On a cluster, run it as a batch job rather than on a login node. A Slurm example:
+
+```bash
+#!/bin/bash
+#SBATCH -n 1 -c 2
+#SBATCH -t 00:30:00
+module load nodejs
+cd /path/to/work/data-files
+python utils/update_model.py --model Human-GEM --version 2.0.0
+```
+
+The compute node needs internet access for steps 2 and 6.
+
+### 4. If the script stops with status 2: fix the model files
+
+The message says what to fix. The common case is a row with the wrong number of fields:
+
+```
+STOP: rows with the wrong number of fields (...):
+  genes.tsv:2841 ENSG00000137714: 7 fields, header has 10
+```
+
+data-generation reads the tables by position, so such a row would put values in the wrong columns. For each listed row:
+
+1. Look at the same row in the next release, or on the model's `develop` branch. If it has been corrected there, copy the corrected row.
+2. Otherwise, if only trailing fields are missing, add them as empty fields: one `""` per missing field in a quoted table, or an empty field in an unquoted one.
+3. If a field in the middle is missing, so that later values are shifted, put each value back in its column by hand. Leave a field empty if its value is unknown; never guess an identifier.
+4. Note each corrected row for the commit message. If the row is still wrong on the model's `develop` branch, open an issue on the model repository.
+
+Then rerun with `--keep-files`, which skips the download and keeps your fixes:
+
+```bash
+python utils/update_model.py --model Human-GEM --version 2.0.0 --keep-files
+```
+
+Other stops and what to do:
+
+| Message | Fix |
+| --- | --- |
+| `... has uncommitted changes` | Start from a clean `integrated-models/<Model>`, or add `--keep-files` if the changes are your own fixes to this update |
+| `the YAML says version X, not Y` | The release's metaData has the wrong version: check the tag, then edit `version` in the YAML and rerun with `--keep-files` |
+| `metaData date ... is not YYYY-MM-DD` | Rerun with `--date YYYY-MM-DD`, using the release date |
+| `node is not on PATH`, `run 'yarn install'` | Install or load Node.js; run `yarn install --frozen-lockfile` in data-generation |
+| `the SVG maps are Git LFS pointers` | Run `git lfs pull` in data-files |
+
+### 5. If the script ends with status 1: read the failed checks
+
+The report is at `../model-update-work/<Model>-<version>/check_report.md`. Each failed check is a line starting with `- FAIL:`. If data-generation itself failed, its output is in `generate.log` in the same folder.
+
+| Failed check or error | Usual cause | Fix |
+| --- | --- | --- |
+| data-generation: `subsystem "X" does not exist in the model` | A subsystem with a map was renamed or removed | Edit the row in `integrated-models/<Model>/subsystemSVG.tsv` (rename it, or delete the row if the subsystem is gone); the SVG file stays |
+| data-generation: `TypeError ... geneSuffix` (or `reactionSuffix`, `compoundSuffix`) | The release added a cross-reference column that data-generation does not know (e.g. `metSeedID`) | Add the column to `identifiers.js` in data-generation |
+| `every cross-reference column is known to identifiers.js` | Same as above | Same as above |
+| `<component> cross-reference links` with many missing | A TSV header data-generation cannot read | Compare the header with the previous version |
+| `subsystems`, `compartments` | A subsystem or compartment name data-generation turns into an unexpected id | Read the detail; usually a model issue to report upstream |
+| `integratedModels.json ... matches the YAML` | Index and YAML disagree | Rerun the script with `--keep-files` |
+| `SVG files are real files, not Git LFS pointers` | LFS files not pulled | `git lfs pull` |
+
+After a fix, rerun with `--keep-files`.
+
+### 6. Read the report
+
+All hard checks must pass. Then read the rest of the report; nothing in it blocks the update, but each item should be understood:
+
+- **Warnings (`- WARN:`)** are problems in the model data, such as one metabolite with different formulas in different compartments, or two subsystem names that differ only in case. The site shows one value. Report new ones to the model repository.
+- **Reactions drawn on the maps** lists map reactions that are not in the model. Compare the total with the baseline; a large increase means the maps need an update in the Human-maps or Yeast-maps repository.
+- **Data overlay** shows how many overlay identifiers still match the model.
+- **Changes compared with ...** lists the change in every generated file and every cross-reference database, and the identifiers added and removed. Large drops that the release notes do not explain need a look.
+- **Identifiers used in MetabolicAtlas tests and frontend** lists identifiers in the tests that are no longer in the model; those tests will need new identifiers.
+
+A warning about EC codes under `annotation/ec-code` means the release stores EC numbers where data-generation does not read them. The site would show no EC numbers, so data-generation must be updated first.
+
+### 7. Commit
+
+Commit in two steps, as earlier updates did:
+
+```bash
+git add integrated-models/<Model>/*.yml integrated-models/<Model>/*.tsv
+git commit -m "chore: update <Model> to <version>"      # list hand-corrected rows in the message body
+git add integrated-models/integratedModels.json integrated-models/<Model>/gemRepository.json
+git commit -m "chore: update aggregated index of model versions"
+```
+
+Commit an edit to `subsystemSVG.tsv` or `compartmentSVG.tsv` separately, e.g. `fix: remove SVGs for subsystems deleted from <Model>`. Do not commit anything from the work folder.
+
+## Part 2: test a local deployment
+
+This needs a machine with Docker and `docker compose`, with ports 80, 7474 and 7687 free. Run the commands in bash from the `MetabolicAtlas` folder.
+
+1. Create the environment file: `cp env-local.env.sample env-local.env`, and set `NEO4J_PASSWORD` and `POSTGRES_PASSWORD`.
+2. **Baseline:** with data-files and data-generation on `main`:
+    ```bash
+    source proj.sh
+    build-stack && start-stack
+    ma-exec api yarn test 2>&1 | tee ../test-before.log
+    ```
+3. **Updated data:** switch data-files (and data-generation, if it changed) to the update branch, then:
+    ```bash
+    stop-stack
+    build-stack && start-stack
+    import-neo4j-db
+    ma-exec api yarn test 2>&1 | tee ../test-after.log
+    ```
+    Do not use `clean-stack`: it also deletes the Docker volumes, including the GotEnzymes database.
+4. **Compare the logs.** The API tests contain fixed counts and identifiers that are not updated with every model release, so some tests fail before the update too. Only failures that appear in `test-after.log` and not in `test-before.log` matter. Each one is either an expected change (a count, a version or an identifier that changed with the release, see step 6 of part 1) or a problem to investigate. Update the expected values in the MetabolicAtlas tests in a separate pull request.
+5. **Cypress:** `cd frontend && npx cypress run`. The fixtures are stubbed API responses, so identifiers in them do not matter.
+6. **Look at the site** on `http://localhost`, with the updated model selected:
+    - the model list shows the new version and date;
+    - a reaction with several EC numbers shows each as its own link, and its references are listed;
+    - a gene page shows its cross-references (Ensembl, UniProt, NCBI Gene, Protein Atlas);
+    - a metabolite page shows name, formula and charge;
+    - a subsystem map and a compartment map open, and clicking a reaction opens its panel;
+    - the 3D viewer opens for a compartment;
+    - for Yeast-GEM, the custom maps open; if one no longer matches, it may now be part of the model files;
+    - each data overlay colours the maps (Human-GEM and Yeast-GEM have overlays);
+    - search finds a gene symbol and an EC number;
+    - Compare Models works with the updated model;
+    - the GEM repository timeline ends at the new version.
+
+When the deployment works, push the branch and open a pull request with the report summary: the result line, the warnings, and the changes table.
+
+## Notes for automated runs
+
+- Run the whole of part 1 unattended; stop and hand over at exit status `2` if a row cannot be fixed from a later release, or if a fix would change a value.
+- Never edit model content beyond restoring fields to their columns. Corrections to the model belong in the model's own repository.
+- Commit, push and open pull requests only when asked to.
+- To start an update over, delete the work folder (`../model-update-work`) and discard the changes in `integrated-models/<Model>`.
