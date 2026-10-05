@@ -195,9 +195,11 @@ def run_generation(data_generation, run_dir, data_files):
     with open(os.path.join(run_dir, "generate.log"), "w") as out:
         status = subprocess.run(["node", os.path.join(data_generation, "index.js"), data_files],
                                 cwd=run_dir, stdout=out, stderr=subprocess.STDOUT).returncode
-    if status != 0:
-        tail = open(os.path.join(run_dir, "generate.log")).read()[-3000:]
-        fail(f"data-generation failed (log in {run_dir}/generate.log):\n{tail}", 1)
+    text = open(os.path.join(run_dir, "generate.log")).read()
+    # data-generation can log an error and still exit with status 0
+    errors = [line for line in text.splitlines() if re.match(r"^\w*Error\b", line)]
+    if status != 0 or errors or not os.path.exists(os.path.join(run_dir, "neo4j", "import.cypher")):
+        fail(f"data-generation failed (log in {run_dir}/generate.log):\n" + "\n".join(errors or [text[-3000:]]), 1)
 
 
 def preflight(args, model_dir):
