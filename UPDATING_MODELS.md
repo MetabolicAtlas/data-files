@@ -2,7 +2,7 @@
 
 This guide updates one integrated model (for example Human-GEM 1.19.0 to 2.0.0) in this repository, and checks the result before it is deployed. It is written so that a person or an automated agent can follow it step by step.
 
-Update one model at a time, and one release at a time if several releases have to be caught up.
+Update one model at a time, straight to its latest release. Metabolic Atlas serves only one version of each model, and the maps are not versioned, so intermediate releases never reach the site and need not be integrated. Stepping through them is only useful to find in which release a problem appeared: run the script with `--version` for each one.
 
 The work has two parts:
 
@@ -31,8 +31,8 @@ The script edits only `integrated-models/<Model>/` and `integrated-models/integr
 
 The workflow [`.github/workflows/update-model.yml`](.github/workflows/update-model.yml) runs part 1 in GitHub Actions and opens a pull request:
 
-- **Daily**, it updates Human-GEM to the next release after the integrated one, if there is one.
-- **Manually** (Actions tab, *Update integrated model*, *Run workflow*), it updates any model (`model`), to the next or a given release (`version`). You can also set the data-generation branch or tag to use (`data_generation_ref`).
+- **Daily**, it updates Human-GEM to its latest release, if that is newer than the integrated version.
+- **Manually** (Actions tab, *Update integrated model*, *Run workflow*), it updates any model (`model`), to the latest or a given release (`version`). You can also set the data-generation branch or tag to use (`data_generation_ref`).
 - **On `repository_dispatch`** of type `model-release` with `{"model": ..., "version": ...}`. A model repository's release workflow can send this, given a token with access to this repository.
 
 The workflow does nothing when the model is up to date, or when a branch for the same model and version already exists (one made by hand counts too). Otherwise it pushes `auto/update-<model>-<version>` and opens a pull request. The description shows the script output and the check summary, then the commands and the checklist for part 2. When the update stopped (status 2) or a check failed (status 1), the pull request is a draft and the workflow run fails. To finish such an update:
@@ -81,7 +81,7 @@ cd data-files
 python utils/fetch_release_data.py -s
 ```
 
-This lists every integrated model with a newer release, e.g. `Human-GEM can be updated: 1.19.0 => 2.1.0`. Releases in between should be done one at a time, oldest first.
+This lists every integrated model with a newer release and the latest one, e.g. `Human-GEM can be updated: 1.19.0 => 2.1.0`. Update to that latest release.
 
 ### 2. Make a branch
 
@@ -122,7 +122,7 @@ STOP: rows with the wrong number of fields (...):
 
 data-generation reads the tables by position, so such a row would put values in the wrong columns. For each listed row:
 
-1. Look at the same row in the next release, or on the model's `develop` branch. If it has been corrected there, copy the corrected row.
+1. Look at the same row on the model's `develop` branch. If it has been corrected there, copy the corrected row.
 2. Otherwise, if only trailing fields are missing, add them as empty fields: one `""` per missing field in a quoted table, or an empty field in an unquoted one.
 3. If a field in the middle is missing, so that later values are shifted, put each value back in its column by hand. Leave a field empty if its value is unknown; never guess an identifier.
 4. Note each corrected row for the commit message. If the row is still wrong on the model's `develop` branch, open an issue on the model repository.

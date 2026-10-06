@@ -7,7 +7,8 @@
 # steps to test the update in a local deployment, which needs Docker and stays manual.
 #
 # Triggers:
-#   * daily: updates Human-GEM to the next release after the integrated one, if any;
+#   * daily: updates Human-GEM to its latest release, if that is newer than the integrated one
+#     (Metabolic Atlas serves one version per model, so intermediate releases are skipped);
 #   * manually (Actions tab, Run workflow): any model and version, or check an
 #     update branch again after fixing its files by hand (continue_branch);
 #   * repository_dispatch "model-release" with client_payload {"model", "version"},
@@ -30,7 +31,7 @@ on:
         required: true
         default: Human-GEM
       version:
-        description: "Release to update to (empty: the next release after the integrated one)"
+        description: "Release to update to (empty: the latest release)"
         required: false
         default: ""
       continue_branch:
@@ -89,7 +90,7 @@ jobs:
             version="${CONTINUE_BRANCH##*-}"
           fi
           if [ -z "$version" ]; then
-            version=$(python utils/update_model.py --model "$MODEL" --next-version)
+            version=$(python utils/update_model.py --model "$MODEL" --latest-version)
           fi
           if [ -z "$version" ]; then
             echo "$MODEL is up to date."

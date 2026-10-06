@@ -22,7 +22,7 @@ Steps, in order (see UPDATING_MODELS.md for the full procedure):
 Usage:
     python utils/update_model.py --model Human-GEM --version 2.0.0
     python utils/update_model.py --model Human-GEM --version 2.0.0 --keep-files
-    python utils/update_model.py --model Human-GEM --next-version   # print the next release, if any
+    python utils/update_model.py --model Human-GEM --latest-version   # print the latest release, if newer
 
 Exit status: 0 when every hard check passed, 1 when a check failed, 2 when the model
 files need a manual fix first.
@@ -94,12 +94,13 @@ def integrated_version(model):
     return next(e["version"] for e in index if e["short_name"] == model)
 
 
-def next_version(model):
-    """The oldest release newer than the integrated version, or None; releases are taken one at a time."""
+def latest_version(model):
+    """The latest release if it is newer than the integrated version, otherwise None. Metabolic Atlas
+    serves one version per model, so an update goes straight to the latest release."""
     from packaging.version import Version
     current = Version(integrated_version(model))
-    newer = sorted((Version(r["version"]) for r in releases(model) if Version(r["version"]) > current))
-    return str(newer[0]) if newer else None
+    newer = sorted(Version(r["version"]) for r in releases(model) if Version(r["version"]) > current)
+    return str(newer[-1]) if newer else None
 
 
 # ----------------------------------------------------------------------------- metaData
@@ -227,8 +228,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="folder in integrated-models and repository name, e.g. Human-GEM")
     ap.add_argument("--version", help="release to update to, e.g. 2.0.0")
-    ap.add_argument("--next-version", action="store_true",
-                    help="only print the oldest release newer than the integrated version (nothing if up to date)")
+    ap.add_argument("--latest-version", action="store_true",
+                    help="only print the latest release if it is newer than the integrated version (nothing if up to date)")
     ap.add_argument("--data-generation", default=os.path.join(os.path.dirname(DATA_FILES), "data-generation"),
                     help="data-generation checkout (default: next to data-files)")
     ap.add_argument("--work-dir", default=os.path.join(os.path.dirname(DATA_FILES), "model-update-work"),
@@ -241,8 +242,8 @@ def main():
                     help="generate the baseline from this data-files checkout (e.g. of main) instead of the "
                          "current files; needed with --keep-files when no earlier baseline exists")
     args = ap.parse_args()
-    if args.next_version:
-        print(next_version(args.model) or "")
+    if args.latest_version:
+        print(latest_version(args.model) or "")
         return
     if not args.version:
         ap.error("--version is required")
@@ -339,7 +340,7 @@ def main():
             problems.append(f"  {name}:{line} {row_id}: {n} fields, header has {expected}")
     if problems:
         fail("rows with the wrong number of fields (fix them in integrated-models/"
-             f"{args.model}, check the next release for a corrected row, then rerun with --keep-files):\n"
+             f"{args.model}, check the model's develop branch for a corrected row, then rerun with --keep-files):\n"
              + "\n".join(problems))
     log("4. Tables: every row has as many fields as its header")
 
