@@ -6,7 +6,8 @@ A block is a group of added reactions drawn together: a module of a KEGG map (D7
   1. docked: one of its metabolites is put on a node of that metabolite already on the map, in any of
      the eight orientations (turned or mirrored), where the rest of the block is clear of the drawing;
   2. in free space of its compartment, as close as possible to the map's nodes of its metabolites;
-  3. below the content (the canvas grows) or, for a boxed compartment, in a new box sized to its blocks.
+  3. below the content (the canvas grows); for a boxed compartment, in its box made larger (D11), and for a
+     compartment the map has no box for, in a new box sized to its blocks.
 KEGG gives a block its first shape; it is a guide, not a rule: blocks are turned, mirrored and
 spread apart as the map needs.
 """
@@ -419,7 +420,9 @@ def place_pending(dr, hubs="mid"):
                 log.append(("review", "added reaction could not be placed", b.steps[0][0], comp, ""))
         dr.occ = None
         if leftover:
-            new_box(dr, comp, leftover)
+            import compact
+            if not (boxed and compact.grow_box(dr, comp, leftover, draw, ORIENT[0])):
+                new_box(dr, comp, leftover)
 
 
 PAD = 180  # px around a block in a new box (cofactors, genes)
@@ -427,8 +430,10 @@ PAD = 180  # px around a block in a new box (cofactors, genes)
 
 def new_box(dr, comp, blocks, gap=200):
     """A new box of compartment comp below the drawing, sized to its blocks, laid out in rows."""
+    import compact
     mp = dr.mp
-    width = float(mp.root.get("width")) - 800
+    width = min(float(mp.root.get("width")) - 800,
+                max(max(b.bbox()[2] - b.bbox()[0] + 2 * PAD for b in blocks), compact.squarish(blocks, PAD)))
     rows, row, x = [], [], 0.0
     for b in blocks:
         bb = b.bbox()
@@ -442,7 +447,9 @@ def new_box(dr, comp, blocks, gap=200):
         rows.append(row)
     heights = [max(bb[3] - bb[1] for _, _, bb in r) + 2 * PAD for r in rows]
     inner_w = max(sum(bb[2] - bb[0] + 2 * PAD + gap for _, _, bb in r) - gap for r in rows)
-    reg = L.new_compartment_box(dr, comp, sum(heights) + gap * (len(rows) - 1) - 100, inner_w + 300)
+    height = sum(heights) + gap * (len(rows) - 1) - 100
+    at = compact.free_box_spot(dr, inner_w + 300, height + 150 + 160)  # D13: in free space next to the boxes
+    reg = L.new_compartment_box(dr, comp, height, inner_w + 300, at=at)
     y = reg[1]
     for r, h in zip(rows, heights):
         for b, x, bb in r:

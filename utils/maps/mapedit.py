@@ -626,6 +626,14 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
     if scope is not None:
         layout.pack_genes(mp, log, {e[3] for e in log if e[0] == "R5" and e[1] == "gene detached from reaction"})
         layout.close_space(mp, before_boxes, log)
+        import compact
+        compact.remove_empty_boxes(mp, log)
+        compact.settle_boxes(mp, log)
+        title = None
+        if scope.subsystems:
+            title = next((g.find(SVG + "text") for g in mp.root.iter(SVG + "g") if g.get("class") == "subsystem"
+                          and g.find(SVG + "text") is not None), None)
+        compact.compact(mp, log, title)
 
     mp.root.set("data-modelversion", model.version)
     mp.write(out_path)

@@ -555,6 +555,28 @@ class Drawer:
 
 # ----------------------------------------------------------------------------- scope
 
+ARTEFACT_SUBSYSTEMS = {"Artificial reactions", "Exchange/demand reactions"}
+MAX_METABOLITES = 12  # a reaction with more metabolites is a lumped model reaction
+
+
+def artefact(model, rid):
+    """R11: why a reaction is a model artefact rather than a biochemical step (or None): a reaction of an
+    artificial subsystem (biomass, exchange), a pool reaction that forms a pool, or a lumped reaction with
+    more than MAX_METABOLITES metabolites."""
+    r = model.rxns.get(rid)
+    if not r:
+        return None
+    subs = r.get("subsystem")
+    subs = set(subs if isinstance(subs, list) else [subs])
+    if subs & ARTEFACT_SUBSYSTEMS:
+        return "artificial subsystem"
+    if "Pool reactions" in subs and "pool" in (r.get("name") or "").lower():
+        return "pool reaction"
+    if len(r["stoich"]) > MAX_METABOLITES:
+        return f"{len(r['stoich'])} metabolites"
+    return None
+
+
 class Scope:
     """What belongs on a map: the reactions of a subsystem, or of a compartment (all metabolites in it).
     `only` limits the missing reactions to add, for compartments drawn on several maps (the cytosol)."""
@@ -577,7 +599,7 @@ class Scope:
         return False
 
     def missing(self, drawn):
-        out = [r for r in self.model.rxns if r not in drawn and self.contains(r)]
+        out = [r for r in self.model.rxns if r not in drawn and self.contains(r) and not artefact(self.model, r)]
         if self.only is not None:
             out = [r for r in out if r in self.only]
         return sorted(out)
@@ -605,6 +627,8 @@ def path_search(model, s, t, drawn, scope, max_steps=4, max_cost=4.0):
     def cost(rid):
         if rid in drawn:
             return 0.1
+        if artefact(model, rid):
+            return 1e9
         return 1.0 if scope and scope.contains(rid) else 3.0
 
     heap = [(0.0, 0, s, [])]
@@ -800,6 +824,10 @@ def add_missing(dr, scope, comps_on_map):
     drawn = set(mp.reactions())
     for rid in scope.missing(drawn):
         draw_missing(dr, rid, comps_on_map)
+    for rid in sorted(r for r in dr.model.rxns if r not in drawn and scope.contains(r)):
+        why = artefact(dr.model, rid)
+        if why:
+            dr.log.append(("R11", "model artefact, not drawn", rid, why, dr.model.rxns[rid].get("name", "") or ""))
 
 
 def draw_missing(dr, rid, comps_on_map):
@@ -928,16 +956,34 @@ def chains(model, rids):
     return out
 
 
-def new_compartment_box(dr, comp, height, width=None):
+def new_compartment_box(dr, comp, height, width=None, at=None):
     """A labelled box for a compartment below the existing content, for its added reactions."""
     mp = dr.mp
     template = next((g for g in mp.root.iter(SVG + "g") if g.get("class") == "compartment"
                      and g.find(SVG + "rect") is not None), None)
     w = float(mp.root.get("width"))
-    top = float(mp.root.get("height")) - 100
-    grow_canvas(dr, height + 300)
-    box = (200.0, top, min(w - 300, 200.0 + width) if width else w - 300, top + height + 150)
-    g = element("g", id=comp + " (added)", **{"class": "compartment"})
+    bw = min(w - 500, width) if width else w - 500
+    # next to the boxes added before, in the same row, when it fits; otherwise in a new row below
+    added = [g.find(SVG + "rect") for g in mp.root.iter(SVG + "g")
+             if g.get("class") == "compartment" and (g.get("id") or "").endswith(" (added)")]
+    added = [(float(r.get("x")), float(r.get("y")), float(r.get("x")) + float(r.get("width")),
+              float(r.get("y")) + float(r.get("height"))) for r in added if r is not None]
+    row = [b for b in added if added and b[1] == max(a[1] for a in added)]
+    if at is not None:
+        x0, top = at
+        need = top + height + 150 + 300 - float(mp.root.get("height"))
+        if need > 0:
+            grow_canvas(dr, need)
+    elif row and max(b[2] for b in row) + 150 + bw <= w - 300:
+        x0, top = max(b[2] for b in row) + 150, row[0][1]
+        need = top + height + 150 + 300 - float(mp.root.get("height"))
+        if need > 0:
+            grow_canvas(dr, need)
+    else:
+        x0, top = 200.0, float(mp.root.get("height")) - 100
+        grow_canvas(dr, height + 300)
+    box = (x0, top, x0 + bw, top + height + 150)
+    g = element("g", id=comp + " (added)", **{"class": "compartment", "data-moved": "1"})
     rect = element("rect", **{"class": "shape", "x": fmt(box[0]), "y": fmt(box[1]), "width": fmt(box[2] - box[0]),
                               "height": fmt(box[3] - box[1]), "rx": "150", "ry": "150", "fill": "none", "stroke": "#000",
                               "stroke-width": "22"})
@@ -1549,8 +1595,9 @@ def pack_genes(mp, log, only):
 def close_space(mp, before_boxes, log, keep=120, min_gap=300):
     """D6: inside each compartment box, close stripes that are empty now but held content before."""
     for comp, (bx0, by0, bx1, by1) in compartment_boxes(mp).items():
-        rect = next(g.find(SVG + "rect") for g in mp.root.iter(SVG + "g")
-                    if g.get("class") == "compartment" and g.get("id") == comp)
+        group = next(g for g in mp.root.iter(SVG + "g") if g.get("class") == "compartment" and g.get("id") == comp)
+        rect = group.find(SVG + "rect")
+        grown = group.attrib.pop("data-grown", None) is not None
         inside = lambda b: bx0 <= (b[0] + b[2]) / 2 <= bx1 and by0 <= (b[1] + b[3]) / 2 <= by1  # noqa: E731
         now = [b for b in (node_box(mp, n) for n in mp.layer["nodes"]) if b and inside(b)]
         before = [b for b in before_boxes if inside(b)]
@@ -1588,7 +1635,7 @@ def close_space(mp, before_boxes, log, keep=120, min_gap=300):
             for a, b in free:
                 if b - a < min_gap or (b - a) - (100 if a == lo or b == hi else keep) <= 0:
                     continue
-                if not any(x[axis] < b and x[axis + 2] > a for x in before):
+                if not grown and not any(x[axis] < b and x[axis + 2] > a for x in before):
                     continue  # this space was already empty
                 leading, trailing = a == lo, b == hi
                 target = 100 if (leading or trailing) else keep
