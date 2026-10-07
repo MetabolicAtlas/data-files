@@ -29,7 +29,6 @@ N-glycan biosynthesis	N-glycan biosynthesis	n_glycan_biosynthesis.svg
 Amino sugar and nucleotide sugar metabolism	Amino sugar and nucleotide sugar metabolism	amino_sugar_and_nucleotide_sugar_metabolism.svg
 Glycerolipid metabolism	Glycerolipid metabolism	glycerolipid_metabolism.svg
 Inositol phosphate metabolism	Inositol phosphate metabolism	inositol_phosphate_metabolism.svg
-Glycerophospholipid metabolism	Glycerophospholipid metabolism	glycerolipid_metabolism_or_glycerophospholipid_metabolism.svg
 Sphingolipid metabolism	Sphingolipid metabolism	sphingolipid_metabolism.svg
 Pyruvate metabolism	Pyruvate metabolism	pyruvate_metabolism.svg
 Glyoxylate and dicarboxylate metabolism	Glyoxylate and dicarboxylate metabolism	glyoxylate_and_dicarboxylate_metabolism.svg
@@ -43,10 +42,38 @@ Biotin metabolism	Biotin metabolism	biotin_metabolism.svg
 Folate biosynthesis	Folate biosynthesis	folate_biosynthesis.svg
 Porphyrin and chlorophyll metabolism	Porphyrin and chlorophyll metabolism	porphyrin_and_chlorophyll_metabolism.svg
 Terpenoid backbone biosynthesis	Terpenoid backbone biosynthesis	terpenoid_backbone_biosynthesis.svg
-Sulfur metabolism	Energy metabolism	energy_metabolism.svg
 Biosynthesis of unsaturated fatty acids	Biosynthesis of unsaturated fatty acids	biosynthesis_of_unsaturated_fatty_acids.svg
-Alternate carbon metabolism	Alternate carbon metabolism	carbon_metabolism.svg
 Complex alcohol metabolism	Complex alcohol metabolism	complex_alcohol_metabolism.svg
 Methylglyoxal metabolism	Methylglyoxal metabolism	methylglyoxal_metabolism.svg
 SLIME reaction	SLIME reaction	slime_reaction.svg
 Sphingoglycolipid metabolism	Sphingoglycolipid metabolism	sphingoglycolipid_metabolism.svg
+Glycerophospholipid metabolism	Glycerophospholipid metabolism	glycerophospholipid_metabolism.svg
+Fatty acid degradation	Fatty acid degradation	fatty_acid_degradation.svg
+tRNA metabolism	tRNA metabolism	trna_metabolism.svg
+Fatty acid ester pathway	Fatty acid ester pathway	fatty_acid_ester_pathway.svg
+Glycolysis / gluconeogenesis	Glycolysis / gluconeogenesis	glycolysis_gluconeogenesis.svg
+Citrate cycle (TCA cycle)	Citrate cycle (TCA cycle)	citrate_cycle_tca_cycle.svg
+Alternate carbon metabolism	Alternate carbon metabolism	alternate_carbon_metabolism.svg
+Pentose phosphate pathway	Pentose phosphate pathway	pentose_phosphate_pathway.svg
+Sulfur metabolism	Sulfur metabolism	sulfur_metabolism.svg
+Oxidative phosphorylation	Oxidative phosphorylation	oxidative_phosphorylation.svg
+Vitamin b6 metabolism	Vitamin b6 metabolism	vitamin_b6_metabolism.svg
+Dipeptidases	Dipeptidases	dipeptidases.svg
+Pantothenate and coa biosynthesis	Pantothenate and coa biosynthesis	pantothenate_and_coa_biosynthesis.svg
+Glycosylphosphatidylinositol (gpi)-anchor biosynthesis	Glycosylphosphatidylinositol (gpi)-anchor biosynthesis	glycosylphosphatidylinositol_gpi_anchor_biosynthesis.svg
+Growth	Growth	growth.svg
+Nitrogen metabolism	Nitrogen metabolism	nitrogen_metabolism.svg
+Butanoate metabolism	Butanoate metabolism	butanoate_metabolism.svg
+Arachidonic acid metabolism	Arachidonic acid metabolism	arachidonic_acid_metabolism.svg
+Phosphatidylinositol signaling system	Phosphatidylinositol signaling system	phosphatidylinositol_signaling_system.svg
+Cyclic nucleotide metabolism	Cyclic nucleotide metabolism	cyclic_nucleotide_metabolism.svg
+Carnitine metabolism	Carnitine metabolism	carnitine_metabolism.svg
+Cellular response to anaerobic conditions	Cellular response to anaerobic conditions	cellular_response_to_anaerobic_conditions.svg
+Ascospore biosynthesis	Ascospore biosynthesis	ascospore_biosynthesis.svg
+Superoxide metabolism	Superoxide metabolism	superoxide_metabolism.svg
+Other	Other	other.svg
+Ascorbate and aldarate metabolism	Ascorbate and aldarate metabolism	ascorbate_and_aldarate_metabolism.svg
+Taurine and hypotaurine metabolism	Taurine and hypotaurine metabolism	taurine_and_hypotaurine_metabolism.svg
+Threonylcarbamoyladenosine metabolism	Threonylcarbamoyladenosine metabolism	threonylcarbamoyladenosine_metabolism.svg
+DNA repair	DNA repair	dna_repair.svg
+Insect hormone biosynthesis	Insect hormone biosynthesis	insect_hormone_biosynthesis.svg
