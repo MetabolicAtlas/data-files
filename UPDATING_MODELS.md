@@ -21,11 +21,22 @@ The work has two parts:
 | 4. Tables | Checks that every row in the three TSV files has as many fields as the header | any row has the wrong number of fields |
 | 5. Index | Sets `version` and `date` of the model in `integrated-models/integratedModels.json` | the model is not in the index |
 | 6. Timeline | Writes the model's GitHub releases, up to this version, to `integrated-models/<Model>/gemRepository.json` | the release is not on GitHub |
-| 7. Generate and check | Runs data-generation on the updated files, then `utils/check_generated_data.py`, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
+| 7. Maps | Fits the SVG maps in `svg/<Model>` to the new version with `utils/maps/mapedit.py` (see [Maps](#maps) below) | the maps are Git LFS pointers |
+| 8. Generate and check | Runs data-generation on the updated files, then `utils/check_generated_data.py`, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
 
 Exit status: `0` all hard checks passed, `1` data-generation or a hard check failed, `2` a manual fix is needed first.
 
-The script edits only `integrated-models/<Model>/` and `integrated-models/integratedModels.json`. Everything it generates goes to a work folder outside the repository (default `../model-update-work`).
+The script edits only `integrated-models/<Model>/`, `integrated-models/integratedModels.json` and the maps in `svg/<Model>`. Everything it generates goes to a work folder outside the repository (default `../model-update-work`).
+
+### Maps
+
+The maps are edited in place, keeping their drawing: identifiers follow the model; reactions and metabolites that are gone are removed; metabolites swapped in a reaction are relabelled; gene boxes follow the gene rules; reactions of a map's subsystem (or compartment) that are not drawn are added next to their metabolites, in free space or below the drawing; parts that share a metabolite are connected; and the background band follows the edges. The rules are listed in `utils/maps/RULES.md`. The step writes to `<work>/<Model>-<version>-maps/`:
+
+- `maps_summary.md`: the number of changes per rule, and what is left for review (also in the pull request description);
+- `edited/changes.tsv`: every change, by map and rule;
+- `edited/*.review.svg`: copies of the maps with the changes highlighted (the workflow keeps them as the `map-review` artifact).
+
+Open a few review copies, the maps with the most changes first. Maps without compartment boxes (Yeast-GEM's) draw every compartment in one area, and their gene boxes show the gene name over its identifier; `--gene-label` sets this. With `--kegg-dir <cache>` (made by `utils/maps/kegg_fetch.py`), added reactions that a KEGG map of their subsystem shows keep KEGG's arrangement. `--skip-maps` leaves the maps unchanged. New maps (for a subsystem or compartment without one) are not made by this step; `utils/maps/newmap.py` makes a blank map to start from.
 
 ## Automated updates
 
@@ -67,7 +78,7 @@ pip install -r data-files/utils/requirements.txt
 You need:
 
 - Node.js 12 or later and yarn 1.22 or later. On a cluster with environment modules, for example `module load nodejs`.
-- Python 3.9 or later with the packages in `utils/requirements.txt`. The script uses `PyYAML` and `PyGithub`.
+- Python 3.9 or later with the packages in `utils/requirements.txt`. The script uses `PyYAML` and `PyGithub`, and the map editor `lxml`.
 - Git LFS. Without `git lfs pull` the SVG maps are pointer files; the script stops and says so.
 - A data-generation version that writes EC codes as `; `-separated strings and reads quoted TSV headers. The script warns if it does not.
 - Optionally `GH_TOKEN`, a GitHub token with read access. Without it GitHub allows 60 API calls an hour, which is enough for one model.
@@ -164,7 +175,7 @@ After a fix, rerun with `--keep-files`.
 All hard checks must pass. Then read the rest of the report; nothing in it blocks the update, but each item should be understood:
 
 - **Warnings (`- WARN:`)** are problems in the model data, such as one metabolite with different formulas in different compartments, or two subsystem names that differ only in case. The site shows one value. Report new ones to the model repository.
-- **Reactions drawn on the maps** lists map reactions that are not in the model. Compare the total with the baseline; a large increase means the maps need an update in the Human-maps or Yeast-maps repository.
+- **Reactions drawn on the maps** lists map reactions that are not in the model. After the maps step this should be empty; anything listed is in the map summary's review items.
 - **Data overlay** shows how many overlay identifiers still match the model.
 - **Changes compared with ...** lists the change in every generated file and every cross-reference database, and the identifiers added and removed. Large drops that the release notes do not explain need a look.
 - **Identifiers used in MetabolicAtlas tests and frontend** lists identifiers in the tests that are no longer in the model; those tests will need new identifiers.
@@ -180,6 +191,8 @@ git add integrated-models/<Model>/*.yml integrated-models/<Model>/*.tsv
 git commit -m "chore: update <Model> to <version>"      # list hand-corrected rows in the message body
 git add integrated-models/integratedModels.json integrated-models/<Model>/gemRepository.json
 git commit -m "chore: update aggregated index of model versions"
+git add svg/<Model>
+git commit -m "feat: fit the <Model> maps to <version>"
 ```
 
 Commit an edit to `subsystemSVG.tsv` or `compartmentSVG.tsv` separately, e.g. `fix: remove SVGs for subsystems deleted from <Model>`. Do not commit anything from the work folder.

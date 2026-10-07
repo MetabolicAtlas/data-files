@@ -4,3 +4,4 @@ numpy
 packaging
 PyYAML
 matplotlib
+lxml

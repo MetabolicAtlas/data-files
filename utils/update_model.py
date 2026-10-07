@@ -29,6 +29,7 @@ files need a manual fix first.
 """
 
 import argparse
+import collections
 import csv
 import glob
 import json
@@ -224,6 +225,67 @@ def preflight(args, model_dir):
             fail(f"{model_dir} has uncommitted changes; commit or discard them, or rerun with --keep-files")
 
 
+def update_maps(args, model_dir, new_yaml, old_yaml, work_maps, summary_path):
+    """Fit the model's SVG maps to the new version with utils/maps/mapedit.py (rules in utils/maps/RULES.md).
+
+    The maps in svg/<model> are replaced by the edited ones; the change list (edited/changes.tsv), copies
+    with the changes highlighted (edited/*.review.svg) and a summary stay in work_maps."""
+    svg_dir = os.path.join(DATA_FILES, "svg", args.model)
+    maps = sorted(glob.glob(os.path.join(svg_dir, "*.svg")))
+    if not maps:
+        log(f"7. Maps: no maps in svg/{args.model}")
+        return
+    if any(open(m, "rb").read(len(b"version https://git-lfs")) == b"version https://git-lfs" for m in maps):
+        fail(f"svg/{args.model} holds Git LFS pointers; run `git lfs pull` first, or pass --skip-maps")
+    out = os.path.join(work_maps, "edited")
+    shutil.rmtree(work_maps, ignore_errors=True)
+    os.makedirs(out)
+    tables = model_dir
+    if not has_rows(os.path.join(model_dir, "reactions.tsv")):  # releases without TSV files: written from the YAML
+        tables = os.path.join(work_maps, "model-tables")
+        subprocess.run([sys.executable, os.path.join(HERE, "maps", "yaml_to_tsv.py"), new_yaml, tables],
+                       check=True, stdout=subprocess.DEVNULL)
+    boxed = any(b'class="compartment"' in open(m, "rb").read() for m in maps)
+    cmd = [sys.executable, os.path.join(HERE, "maps", "mapedit.py"), new_yaml, tables, old_yaml,
+           "--maps", *maps, "--out", out, "--review",
+           "--map-table", os.path.join(model_dir, "subsystemSVG.tsv"),
+           "--compartment-table", os.path.join(model_dir, "compartmentSVG.tsv"),
+           "--custom-table", os.path.join(model_dir, "customSVG.tsv"),
+           "--gene-label", args.gene_label or ("name" if boxed else "both")]
+    if not boxed:
+        cmd.append("--one-area")  # maps without compartment boxes draw every compartment in one area
+    if args.kegg_dir:
+        cmd += ["--kegg-dir", os.path.abspath(args.kegg_dir)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode:
+        log(f"7. Maps: the map editor failed; the maps are left unchanged\n{result.stderr[-3000:]}")
+        return
+    edited = 0
+    for m in maps:
+        new = os.path.join(out, os.path.basename(m))
+        if os.path.exists(new) and open(new, "rb").read() != open(m, "rb").read():
+            shutil.copyfile(new, m)
+            edited += 1
+    rows = [line.rstrip("\n").split("\t") for line in open(os.path.join(out, "changes.tsv"), encoding="utf-8")][1:]
+    changes = collections.Counter((r[1], r[2]) for r in rows
+                                  if len(r) > 2 and r[1] not in ("review", "error") and r[2] != "connection passes")
+    review = collections.Counter(r[2] for r in rows if len(r) > 2 and r[1] == "review")
+    errors = [r[0] for r in rows if len(r) > 1 and r[1] == "error"]
+    lines = [f"{edited} of {len(maps)} maps changed. The rules are listed in utils/maps/RULES.md; the workflow "
+             "artifact holds the full change list and copies of the maps with the changes highlighted.", "",
+             "| rule | change | count |", "|---|---|---|"]
+    lines += [f"| {k[0]} | {k[1]} | {n} |" for k, n in sorted(changes.items(), key=lambda x: (x[0][0][0], int(x[0][0][1:]) if x[0][0][1:].isdigit() else 0))]
+    if review:
+        lines += ["", "Left for review:", "", "| item | count |", "|---|---|"]
+        lines += [f"| {k} | {n} |" for k, n in review.most_common()]
+    if errors:
+        lines += ["", f"Maps left unchanged after an error: {', '.join(sorted(set(errors)))}"]
+    with open(summary_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    log(f"7. Maps: {edited} of {len(maps)} maps changed"
+        + (f"; {len(set(errors))} left unchanged after an error" if errors else "") + f"; summary in {summary_path}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="folder in integrated-models and repository name, e.g. Human-GEM")
@@ -238,6 +300,12 @@ def main():
                     help="do not download; use the model files in data-files as they are (after a manual fix)")
     ap.add_argument("--date", help="date to use instead of the one in the release YAML (YYYY-MM-DD)")
     ap.add_argument("--skip-timeline", action="store_true", help="leave gemRepository.json unchanged")
+    ap.add_argument("--skip-maps", action="store_true", help="leave the SVG maps unchanged")
+    ap.add_argument("--gene-label", choices=["name", "orf", "both"],
+                    help="gene boxes on the maps: gene name, gene id, or name over id (default: name, or both for "
+                         "maps without compartment boxes, such as Yeast-GEM's)")
+    ap.add_argument("--kegg-dir", help="KGML cache made by utils/maps/kegg_fetch.py: added reactions that a KEGG map "
+                                       "of their subsystem shows keep KEGG's arrangement")
     ap.add_argument("--baseline-data-files",
                     help="generate the baseline from this data-files checkout (e.g. of main) instead of the "
                          "current files; needed with --keep-files when no earlier baseline exists")
@@ -376,8 +444,16 @@ def main():
             fh.write(json.dumps(timeline, indent=2))
         log(f"6. Timeline: {len(timeline)} releases, last {wanted}")
 
-    # 7. generate and check
-    log("7. Generating and checking the new version")
+    # 7. maps
+    maps_dir = os.path.join(work, f"{args.model}-{version}-maps")  # kept apart: step 8 empties its own folder
+    maps_summary = os.path.join(maps_dir, "maps_summary.md")
+    if args.skip_maps:
+        log("7. Maps: skipped")
+    else:
+        update_maps(args, model_dir, target_yaml, old_yaml, maps_dir, maps_summary)
+
+    # 8. generate and check
+    log("8. Generating and checking the new version")
     run_dir = os.path.join(work, f"{args.model}-{version}")
     run_generation(args.data_generation, run_dir, DATA_FILES)
     report = os.path.join(run_dir, "check_report.md")

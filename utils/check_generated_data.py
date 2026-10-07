@@ -500,8 +500,8 @@ def check_maps(rep, model_dir, data_files, model, m, run):
         if not os.path.exists(path) or node["filename"] in pointers:
             continue
         text = open(path, encoding="utf8", errors="replace").read()
-        drawn = set(re.findall(r'class="rea"[^>]*?\bid="(MAR\d{5})"', text)) | set(
-            re.findall(r'\bid="(MAR\d{5})"[^>]*?class="rea"', text))
+        drawn = set(re.findall(r'class="rea"[^>]*?\bid="(MAR\d{5}|r_\d{4})"', text)) | set(
+            re.findall(r'\bid="(MAR\d{5}|r_\d{4})"[^>]*?class="rea"', text))
         absent = sorted(drawn - rxns)
         if absent:
             rows.append((node["filename"], len(drawn), len(absent), " ".join(absent[:8])))

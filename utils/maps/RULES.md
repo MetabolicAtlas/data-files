@@ -1,0 +1,52 @@
+# Map editing rules
+
+Rules the map editor (`mapedit.py`, `layout.py`) applies when it fits the Metabolic Atlas Human-GEM maps to a model release. R rules keep the existing drawing correct; D rules are design rules that come from review feedback. Each rule records where it came from.
+
+## Correctness
+
+| Rule | What it does | Source |
+| --- | --- | --- |
+| R1 | Metabolite ids follow the model: old compartment letters (p→x, s→e), legacy BiGG/HMR/Recon ids via metabolites.tsv, merged metabolites matched by name and compartment | round 1 |
+| R2 | A reaction replaced by one with the same stoichiometry (or the same main metabolites) gets the new id, unless that reaction is already drawn. A legacy reaction id that contains a current MAR id (left by the 2021 id conversion) gets that id | round 1; round 4 |
+| R3 | A reaction no longer in the model is removed with its edges, arrowheads and the nodes that served only it | round 1 |
+| R4 | A metabolite drawn on a reaction it is no longer part of (including ids no longer in the model) is detached; a side metabolite left without a reaction is removed | round 1 |
+| R5 | Gene boxes follow the reaction's gene rule; symbols follow genes.tsv | round 1 |
+| R6 | `data-modelversion` is the model version | round 1 |
+| R7 | The background band is cut back wherever it no longer runs along an edge (within 25 px); fragments under 60 px left by the cut are dropped. Compartment maps have one band per subsystem; all are trimmed | round 1; round 4 feedback: "cut back" |
+| R8 | A gene stack that lost a gene is packed: the remaining boxes close the gaps, and the line to the reaction follows | round 3 feedback: "close" (Q4) |
+| R9 | A node that serves one reaction and is no longer part of it takes the id and name of a metabolite of that reaction that is not drawn, in the same role (substrate or product), keeping the layout; roles come from the earliest version that has the node. A main metabolite already drawn elsewhere is linked there instead (D5). Cofactors that are still missing are added as dots next to the reaction | round 3 feedback: "yes" (Q5) |
+| R10 | A reaction of another subsystem that has a map of its own is removed from a subsystem map (D3 draws it on its own map). Reactions of subsystems without a map stay | round 5 answer: "yes" (remove reactions now in another subsystem) |
+
+## Design
+
+| Rule | What it does | Source |
+| --- | --- | --- |
+| D1 | Keep a pathway's shape: when a removed reaction ran between two main metabolites and the model still joins the same two drawn nodes through reactions drawn elsewhere (a detour), those reactions and their intermediates are moved onto the removed reaction's line. A single reaction is moved only when the line is part of a ring. Paths drawn between other copies of the metabolites are not moved | v2 feedback: "keep the TCA circle" |
+| D2 | Restore connections: when the model joins the two nodes through reactions not yet drawn (preferring reactions of the map's subsystem, at most four steps), those reactions are drawn on the removed reaction's line | v2 feedback: "keep the network connected" |
+| D3 | All reactions in the map's scope are on it. Scope is the subsystem for subsystem maps, and the compartment (all metabolites in it) for compartment maps; the five cytosol maps share the cytosol, and each missing reaction goes to the part that already draws most of its metabolites. A missing reaction is attached next to its drawn main metabolite(s) only when they are within 450 px and there is free room; otherwise it is placed by D9. A reaction in a compartment the map has no area for gets a new box of that compartment, sized to its content. Reactions spanning compartments are listed (on maps without compartment boxes they are drawn in the one area, see Scope) | v2 feedback: "all reactions present"; round 3: "bottom"; round 4: "yes" to compartment maps |
+| D4 | Re-space a ring: when a path is laid on a circular backbone, free nodes on the circle are spaced evenly; ring nodes with structures off the ring keep their spacing as rigid blocks; the off-ring structures are shifted (not turned) by the mean movement of their ring nodes, so they stay upright, and only their edges into the ring nodes stretch. Cofactor dots of reactions on the ring turn with the circle. On such maps the band is regenerated from the main edges | v2 feedback: "rearrange what else is on the circle"; round 3: "don't keep the rotated" (Q1) |
+| D5 | Complete drawn reactions: a drawn reaction missing a main metabolite is linked to that metabolite's nearest node within 300 px, or gets a new node next to it; a reaction none of whose drawn metabolites is still part of it is redrawn as a missing reaction (D3) | v2, from the glycolysis review; round 4 (no links across the map) |
+| D6 | Close empty space: inside a compartment box, a stripe (at least 300 px) that is empty now but held content before is narrowed to 120 px (100 px at the box edge) by moving everything beyond it, edges and band included; the box shrinks accordingly. Content stays clear of the compartment's heading. Fragments the model no longer connects are kept | round 3 feedback: "move" (Q6), "keep" (Q2) |
+| D7 | KEGG modules: added reactions that a KEGG map of the subsystem shows start from the KEGG arrangement (scaled so no reaction is longer than 400 px), one block per connected module; compounds shared within a module are one node. A crowded module first grows (at most 1.6x), then only the compounds still closer than 250 px move apart ("mid"; the alternatives "spread" and "scale" only move or only enlarge). KEGG is a guide, not a rule. Fitting a KEGG map onto the existing drawing (D7a) was tried and dropped: the drawings do not follow KEGG geometry | D7 pilot; round 5 answers |
+| D8 | Draw a new map (one without an existing drawing) as its KEGG map draws it (`--kegg-relayout`); existing maps keep their drawing. The compartment's reactions, drawn and missing, are erased and redrawn: compounds where KEGG has them, at one scale for both axes (KEGG x3 to x4, filling the area); crowded places open up column by column and row by row (labels, and the reaction between joined compounds, must fit) so KEGG's rows and columns stay aligned. Each reaction sits at KEGG's enzyme box, on the line when its substrate and product share a row or column; edges are orthogonal with one bend, the segment at the reaction along the reaction's direction. Reactions between the same two compounds get parallel lanes 200 px apart. Matching is by KEGG reaction id, else by a KEGG reaction joining a substrate and a product; anomers (alpha-/beta-X) count as X when no exact id matches. A compound KEGG shows twice within 600 px is one node. Compartment boxes the layout would cover move, with their content, to a free place right of it. The band is regenerated. Reactions KEGG doesn't show go to D9 | glycolysis feedback ("should look more like KEGG"); round 5 feedback: the first D8 versions made "little effort to look like KEGG"; decision after round 5: keep the current drawing of existing maps |
+| D9 | Placement of added reactions as blocks (a KEGG module, a chain, or a single reaction; chains wrap as a serpentine after six reactions). In order of preference: docked onto a node of one of its metabolites in any of eight orientations (turned or mirrored) where the rest of the block is clear (30 px) of the drawing; in free space of its compartment closest to the drawn nodes of its metabolites; below the drawing (the canvas grows, and widens once it is taller than 0.7 of its width); for a full boxed compartment, a new box sized to its blocks | round 5 answers: "use KEGG as inspiration", "don't strictly adhere to orphan reactions at the bottom if there is white space", "connect if they can cleanly be connected" |
+| D10 | Connect the drawing: a metabolite (not a cofactor, not a hub in more than 30 reactions of the model) drawn as main nodes in parts that are not connected gets one node. The reactions at the copy in the smaller part are linked to the other copy by a line with one or two right-angle bends (at most 1500 px, crossing no node, label or gene box and at most three edges); the emptied copy is removed. Unconnected parts first, smallest first; runs in passes until a pass adds no link (at most 8). A part that cannot be linked, made only of reactions added in this run and at most 8 reactions, is placed again (D9) next to its other copy, so a later pass can link it; each part moves once. Pairs left are listed | round 5 feedback: "try to increase connectivity by connecting (particularly unconnected) reactions"; "multiple passes"; round 6: "move it" |
+
+## Scope of the editor
+
+- Subsystem and compartment maps (subsystemSVG.tsv, compartmentSVG.tsv) are edited.
+- Custom maps (customSVG.tsv, e.g. the protein secretion pathway) show content beyond the model and are left unchanged; so are files not linked in any table.
+- Models: Human-GEM and Yeast-GEM. Compartments come from the model; Yeast-GEM TSVs are written from the YAML (`yaml_to_tsv.py`).
+- Maps without compartment boxes (all Yeast-GEM subsystem maps, `--one-area`) draw every compartment in one area; D8 still lays out only the main compartment.
+- New maps (subsystems or compartments without one) start as a blank copy of a map of the same model (`newmap.py`), each with its own band colour from the Human-GEM maps' colours, and are filled by D8 where a KEGG map covers the subsystem, by D9 otherwise.
+- A compartment with many reactions (Yeast-GEM) gets several maps of about 200 reactions, each holding whole subsystems; a part under 40 reactions joins another (`--parts`).
+- Gene boxes show the gene name, the gene id, or the name over the id (`--gene-label`; open choice for Yeast-GEM).
+
+## Drawing conventions for new and moved elements
+
+- Reaction: white diamond, half-diagonal 30, id label inside.
+- Main metabolite: light blue ellipse (30 × 20), name inside, wrapped to at most three lines of about 16 characters.
+- Cofactor: black dot (r 7) with the name beside it, away from the reaction; substrates before the reaction node, products after it, on the side with more free space.
+- Genes: yellow 60 × 30 boxes in a stack of up to three columns, on the side opposite the cofactors, with a line to the reaction; placed where they cover nothing.
+- Arrowheads on products, and on substrates of reversible reactions.
+- The background band runs along edges between main metabolites and reactions.

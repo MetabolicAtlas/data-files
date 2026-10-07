@@ -64,7 +64,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Check out data-files
         uses: actions/checkout@v4
@@ -72,6 +72,7 @@ jobs:
           path: data-files
           ref: ${{ inputs.continue_branch || github.event.repository.default_branch }}
           fetch-depth: 0
+          lfs: true  # the maps step edits the SVG maps
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -79,7 +80,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python packages
-        run: pip install pyyaml PyGithub packaging
+        run: pip install pyyaml PyGithub packaging lxml
 
       - name: Decide the version and branch
         id: target
@@ -193,6 +194,11 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "chore: update aggregated index of model versions"
           fi
+          git add "svg/$MODEL"
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: fit the $MODEL maps to $VERSION" \
+              -m "Maps edited by utils/maps/mapedit.py (rules in utils/maps/RULES.md)."
+          fi
           git push origin "$BRANCH"
 
       - name: Open or update the pull request
@@ -204,7 +210,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python data-files/utils/update_pr_body.py --model "$MODEL" --version "$VERSION" --status "$STATUS" \
-            --log update.log --report "work/$MODEL-$VERSION/check_report.md" --branch "$BRANCH" --base "$BASE" \
+            --log update.log --report "work/$MODEL-$VERSION/check_report.md" \
+            --maps-summary "work/$MODEL-$VERSION-maps/maps_summary.md" --branch "$BRANCH" --base "$BASE" \
             --data-generation-ref "$DATA_GENERATION_REF" --run-url "$RUN_URL" > body.md
           number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -z "$number" ]; then
@@ -230,7 +237,18 @@ jobs:
             update.log
             work/*/check_report.md
             work/*/generate.log
+            work/*-maps/maps_summary.md
+            work/*-maps/edited/changes.tsv
           if-no-files-found: ignore
+
+      - name: Keep the map review copies
+        if: always() && steps.target.outputs.version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: map-review
+          path: work/*-maps/edited/*.review.svg
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Fail when the update needs attention
         if: steps.update.outputs.status != '' && steps.update.outputs.status != '0'

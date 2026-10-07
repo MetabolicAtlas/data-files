@@ -7,7 +7,7 @@ gives the steps to test the update in a local deployment.
 
 Usage:
     python update_pr_body.py --model Human-GEM --version 2.0.0 --status 0 --log update.log \\
-        --report check_report.md --branch auto/update-human-gem-2.0.0 \\
+        --report check_report.md --maps-summary maps_summary.md --branch auto/update-human-gem-2.0.0 \\
         --data-generation-ref main --run-url <url> > body.md
 """
 
@@ -44,6 +44,7 @@ def main():
     ap.add_argument("--status", type=int, required=True, help="exit status of update_model.py")
     ap.add_argument("--log", required=True, help="output of update_model.py")
     ap.add_argument("--report", help="check_report.md, when the script got that far")
+    ap.add_argument("--maps-summary", help="maps_summary.md written by the maps step of update_model.py")
     ap.add_argument("--branch", required=True, help="branch of this pull request")
     ap.add_argument("--base", default="main", help="branch the pull request targets")
     ap.add_argument("--data-generation-ref", default="main")
@@ -75,6 +76,8 @@ def main():
         out += ["### Check of the generated data", "", result, ""]
         out += flagged + [""] if flagged else []
     optional = []
+    if args.maps_summary and os.path.exists(args.maps_summary):
+        optional.append(details("Map changes", open(args.maps_summary, encoding="utf-8").read().strip()))
     for title, summary in (("Changes compared with", "Changes compared with the integrated version"),
                            ("Data overlay", "Data overlay coverage"),
                            ("Reactions drawn on the maps", "Reactions drawn on the maps that are not in the model"),
