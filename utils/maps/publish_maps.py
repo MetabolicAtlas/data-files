@@ -2,7 +2,7 @@
 """Write a model's maps into a checkout of its maps repository (SysBioChalmers/Human-maps, Yeast-maps).
 
 The subsystem and compartment maps listed in integrated-models/<Model>/subsystemSVG.tsv and
-compartmentSVG.tsv are written as SVG, SBGN-ML, SBML and PNG (export_formats.py) into
+compartmentSVG.tsv are written as SVG, SBGN-ML, SBML, Escher (JSON) and PNG (export_formats.py) into
 <repo>/subsystem/<format>/ and <repo>/compartment/<format>/; maps that are no longer listed are removed.
 The README's line "The maps match **<Model> <version>**." gets the version in integratedModels.json.
 A summary for the pull request is written to --summary.
@@ -22,7 +22,7 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_FILES = os.path.dirname(os.path.dirname(HERE))
-FORMATS = ("svg", "sbgn", "sbml", "png")
+FORMATS = ("svg", "sbgn", "sbml", "png", "escher")
 
 
 def listed_maps(table):
@@ -61,7 +61,7 @@ def main():
         out = os.path.join(work, kind)
         if maps:
             result = subprocess.run([sys.executable, os.path.join(HERE, "export_formats.py"),
-                                     os.path.join(model_dir, yaml_file), tables, out,
+                                     os.path.join(model_dir, yaml_file), tables, out, "--model-name", a.model,
                                      "--maps", *[os.path.join(svg_dir, m) for m in maps]],
                                     capture_output=True, text=True)
             print(result.stdout[-2000:], result.stderr[-2000:], sep="\n")
@@ -85,7 +85,8 @@ def main():
         open(readme, "w", encoding="utf-8").write(text)
     shutil.rmtree(work)
     lines = [f"Maps of **{a.model} {version}**, written from MetabolicAtlas/data-files (`svg/{a.model}`) by "
-             "`utils/maps/publish_maps.py`, as SVG, SBGN-ML 0.3, SBML Level 3 with layout and groups, and PNG.", "",
+             "`utils/maps/publish_maps.py`, as SVG, SBGN-ML 0.3, SBML Level 3 with layout and groups, Escher (JSON) "
+             "and PNG.", "",
              f"- {counts['subsystem']} subsystem maps and {counts['compartment']} compartment maps"]
     for kind in ("subsystem", "compartment"):
         if removed[kind]:

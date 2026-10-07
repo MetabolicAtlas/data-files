@@ -4,13 +4,15 @@
 For each map: SBGN-ML (process description: metabolites as simple chemicals, reactions as processes,
 genes as macromolecules catalysing them, compartments), SBML Level 3 with the layout and groups packages
 (the reactions with their stoichiometry and gene modifiers from the model, every drawn node and edge in
-the layout, one group per subsystem), and a PNG image. Positions and edge paths are those of the SVG.
+the layout, one group per subsystem), an Escher map (JSON), and a PNG image. Positions and edge paths are
+those of the SVG.
 
 Usage: export_formats.py <model.yml> <model dir with reactions/metabolites/genes.tsv> <out dir>
        --maps a.svg ... [--png-width 3000]
-Writes <out>/<format>/<map>.<ext> for format svg, sbgn, sbml and png. Needs python-libsbml, lxml, cairosvg
-and Pillow. With the libsbgn schema at schema/SBGN.xsd next to this file, every SBGN file is validated against it;
-every SBML file is checked with libsbml.
+Writes <out>/<format>/<map>.<ext> for format svg, sbgn, sbml, escher (.json) and png. Needs python-libsbml,
+lxml, cairosvg and Pillow. With the libsbgn schema at schema/SBGN.xsd next to this file, every SBGN file is
+validated against it; with Escher's map schema at schema/escher_1-0-0.json (and jsonschema), every Escher map
+too; every SBML file is checked with libsbml, and every Escher map with Escher's own consistency checks.
 """
 
 import argparse
@@ -310,6 +312,116 @@ def validate_sbgn(path):
     return [] if ok else [str(e) for e in SCHEMA.error_log][:3]
 
 
+# ----------------------------------------------------------------------------- Escher
+
+ESCHER_SCHEMA = "https://escher.github.io/escher/jsonschema/1-0-0#"
+
+
+def write_escher(d, path, model_name):
+    """An Escher map (JSON, schema 1-0-0): metabolite nodes where the SVG draws them (main metabolites as
+    primary nodes, cofactors as secondary ones), each reaction as a midmarker with two multimarkers along its
+    direction, the SVG's edge paths as Bezier segments (their bends as control points), and the title and
+    compartment headings as text labels. Escher has no boxes, bands or gene boxes; genes are in the gene rules."""
+    import json
+    model = d.model
+    ids = iter(range(1, 10 ** 9))
+    nodes, reactions, labels = {}, {}, {}
+    met_node = {}
+    for i, x in enumerate(d.mets):
+        nid = str(next(ids))
+        met_node[i] = nid
+        px, py = x["pos"]
+        lx, ly = (px - 30, py - 28) if x["main"] else (px + 12, py + 5)
+        nodes[nid] = {"node_type": "metabolite", "x": round(px, 1), "y": round(py, 1), "bigg_id": x["met"],
+                      "name": model.name(x["met"]), "label_x": round(lx, 1), "label_y": round(ly, 1),
+                      "node_is_primary": bool(x["main"])}
+    for rid, rp in d.rpos.items():
+        r = model.rxns[rid]
+        st = r["stoich"]
+        ins = [pts[-2] for i, pts in d.edges[rid] if st.get(d.mets[i]["met"], 0) < 0 and len(pts) > 1]
+        outs = [pts[-2] for i, pts in d.edges[rid] if st.get(d.mets[i]["met"], 0) > 0 and len(pts) > 1]
+        a = (sum(p[0] for p in ins) / len(ins), sum(p[1] for p in ins) / len(ins)) if ins else (rp[0] - 1, rp[1])
+        b = (sum(p[0] for p in outs) / len(outs), sum(p[1] for p in outs) / len(outs)) if outs else (rp[0] + 1, rp[1])
+        u = L.unit(L.sub(b, a)) if L.length(L.sub(b, a)) > 1 else (1.0, 0.0)
+        mid, m_in, m_out = str(next(ids)), str(next(ids)), str(next(ids))
+        for nid, q in ((mid, rp), (m_in, L.add(rp, u, -20)), (m_out, L.add(rp, u, 20))):
+            nodes[nid] = {"node_type": "midmarker" if nid == mid else "multimarker", "x": round(q[0], 1),
+                          "y": round(q[1], 1)}
+        segments = {str(next(ids)): {"from_node_id": m_in, "to_node_id": mid, "b1": None, "b2": None},
+                    str(next(ids)): {"from_node_id": mid, "to_node_id": m_out, "b1": None, "b2": None}}
+        for i, pts in d.edges[rid]:
+            role = st.get(d.mets[i]["met"], 0)
+            if not role:
+                continue
+            bends = [{"x": round(q[0], 1), "y": round(q[1], 1)} for q in pts[1:-1]]
+            b1, b2 = (bends[0], bends[-1]) if bends else (None, None)
+            if role < 0:  # metabolite to the multimarker on the substrate side
+                segments[str(next(ids))] = {"from_node_id": met_node[i], "to_node_id": m_in, "b1": b1, "b2": b2}
+            else:
+                segments[str(next(ids))] = {"from_node_id": m_out, "to_node_id": met_node[i], "b1": b2, "b2": b1}
+        rule = mapedit.text(r.get("gene_reaction_rule"))
+        genes = [{"bigg_id": g, "name": model.symbol.get(g) or g} for g in sorted(r["genes"])]
+        reactions[str(next(ids))] = {
+            "name": mapedit.text(r.get("name")) or rid, "bigg_id": rid,
+            "reversibility": (r.get("lower_bound") or 0) < 0,
+            "label_x": round(rp[0] + 20, 1), "label_y": round(rp[1] - 20, 1),
+            "gene_reaction_rule": rule, "genes": genes,
+            "metabolites": [{"bigg_id": m, "coefficient": c} for m, c in st.items()],
+            "segments": segments}
+    for g in d.mp.root.iter(L.SVG + "g"):
+        if g.get("class") in ("compartment", "subsystem"):
+            for t in g.iter(L.SVG + "text"):
+                content = " ".join(x.strip() for x in t.itertext() if x.strip())
+                b = L.text_box(t)
+                if content and b:
+                    labels[str(next(ids))] = {"text": content, "x": round(b[0] + 10, 1), "y": round(b[3] - 10, 1)}
+    header = {"map_name": f"{d.title} ({model_name})", "map_id": d.name,
+              "map_description": f"{d.title}: a Metabolic Atlas map of {model_name}, converted from its SVG map",
+              "homepage": "https://escher.github.io", "schema": ESCHER_SCHEMA}
+    body = {"reactions": reactions, "nodes": nodes, "text_labels": labels,
+            "canvas": {"x": 0, "y": 0, "width": d.width, "height": d.height}}
+    with open(path, "w") as fh:
+        json.dump([header, body], fh, separators=(",", ":"))
+
+
+ESCHER = None
+
+
+def validate_escher(path):
+    """Errors of an Escher map against its JSON schema (schema/escher_1-0-0.json next to this file) and Escher's
+    own checks (escher.validate): segments end on nodes, connected metabolites have a coefficient, genes have
+    names."""
+    import json
+    global ESCHER
+    errors = []
+    data = json.load(open(path))
+    js = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema", "escher_1-0-0.json")
+    if os.path.exists(js):
+        import jsonschema
+        if ESCHER is None:
+            ESCHER = json.load(open(js))
+        try:
+            jsonschema.validate(data, ESCHER)
+        except jsonschema.ValidationError as err:
+            errors.append(f"schema: {err.message[:200]}")
+    nodes = data[1]["nodes"]
+    for r in data[1]["reactions"].values():
+        coef = {m["bigg_id"] for m in r["metabolites"] if m["coefficient"]}
+        names = {g["bigg_id"] for g in r["genes"] if g.get("name")}
+        for sid_, seg in r["segments"].items():
+            for k in ("from_node_id", "to_node_id"):
+                n = nodes.get(seg[k])
+                if n is None:
+                    errors.append(f"{r['bigg_id']}: segment {sid_} has no {k} node")
+                elif n["node_type"] == "metabolite" and n["bigg_id"] not in coef:
+                    errors.append(f"{r['bigg_id']}: no coefficient for {n['bigg_id']}")
+        rule = re.sub(r"([()\s])(?:and|or)([)(\s])", r"\1\2", f" {r['gene_reaction_rule']} ")
+        for g in re.sub(r"[()]", " ", rule).split():
+            if g not in names:
+                errors.append(f"{r['bigg_id']}: no name for gene {g}")
+    return errors[:3]
+
+
 def write_png(svg, path, width):
     import cairosvg
     from PIL import Image
@@ -324,10 +436,12 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--maps", nargs="+", required=True)
     ap.add_argument("--png-width", type=int, default=3000)
+    ap.add_argument("--model-name", help="model name for the Escher maps (default: the YAML file name)")
     a = ap.parse_args()
     model = mapedit.Model(a.model_yml, a.model_dir, [])
-    for fmt in ("svg", "sbgn", "sbml", "png"):
+    for fmt in ("svg", "sbgn", "sbml", "png", "escher"):
         os.makedirs(os.path.join(a.out, fmt), exist_ok=True)
+    model_name = f"{a.model_name or os.path.basename(a.model_yml).rsplit('.', 1)[0]} {model.version}"
     problems = 0
     for p in a.maps:
         d = MapData(p, model)
@@ -336,11 +450,13 @@ def main():
         errors = validate_sbgn(os.path.join(a.out, "sbgn", d.name + ".sbgn"))
         errors += write_sbml(d, os.path.join(a.out, "sbml", d.name + ".sbml"))
         write_png(p, os.path.join(a.out, "png", d.name + ".png"), a.png_width)
+        write_escher(d, os.path.join(a.out, "escher", d.name + ".json"), model_name)
+        errors += validate_escher(os.path.join(a.out, "escher", d.name + ".json"))
         problems += len(errors)
         edges = sum(len(v) for v in d.edges.values())
         print(f"{d.name}: {len(d.rpos)} reactions, {len(d.mets)} metabolite nodes, {len(d.genes)} gene nodes, "
               f"{edges} edges" + (f"; errors: {errors[:3]}" if errors else ""), flush=True)
-    print("SBGN schema and SBML consistency errors:", problems)
+    print("SBGN schema, SBML consistency and Escher errors:", problems)
 
 
 if __name__ == "__main__":

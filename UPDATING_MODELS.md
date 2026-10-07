@@ -237,11 +237,11 @@ When the deployment works, push the branch and open a pull request with the repo
 
 ## Part 3: publish the maps
 
-The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `utils/maps/publish_maps.py`, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
+The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups), Escher maps (JSON) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `utils/maps/publish_maps.py`, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
 
 The workflow needs the repository secret `MAPS_REPOS_TOKEN`: a token of an account with write access to both maps repositories (a fine-grained token with Contents and Pull requests read and write, on those two repositories). It can also be started by hand from the Actions tab, for one model.
 
-To publish by hand, with python-libsbml, lxml, cairosvg and Pillow installed:
+To publish by hand, with python-libsbml, lxml, cairosvg, Pillow and jsonschema installed:
 
 ```bash
 git clone https://github.com/SysBioChalmers/Human-maps
@@ -249,7 +249,7 @@ python data-files/utils/maps/publish_maps.py --model Human-GEM --repo Human-maps
 cd Human-maps && git switch -c maps-2.1.0 && git add -A && git commit -m "feat: maps for Human-GEM 2.1.0"
 ```
 
-With the libsbgn schema saved as `utils/maps/schema/SBGN.xsd`, every SBGN-ML file is validated against it; every SBML file is checked with libsbml. The script stops if a file does not pass.
+With the libsbgn schema saved as `utils/maps/schema/SBGN.xsd` and Escher's map schema as `utils/maps/schema/escher_1-0-0.json` (from https://escher.github.io/escher/jsonschema/1-0-0, with `jsonschema` installed), every SBGN-ML file and Escher map is validated against them; every SBML file is checked with libsbml, and every Escher map with Escher's own consistency checks. The script stops if a file does not pass.
 
 ## Notes for automated runs
 
