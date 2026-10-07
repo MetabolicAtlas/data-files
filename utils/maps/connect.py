@@ -6,7 +6,8 @@ moved: its reactions are placed again (D9) next to the other copy, or as close t
 later pass can link it. Each link joins two parts, which can make new pairs possible, so it runs in passes
 until a pass adds no link (at most `passes`); pairs that still cannot be linked cleanly are listed for review.
 Hub metabolites (in more than `hub` reactions of the model) are left as drawn: maps show them several times on
-purpose.
+purpose; the metabolites of bridges (D14) are linked all the same, over longer lines (BRIDGE_REACH, crossing
+at most BRIDGE_CROSSINGS edges).
 """
 
 import collections
@@ -63,7 +64,7 @@ def clear(dr, pts, skip, crossings=3, margin=8):
     return len(cross) <= crossings
 
 
-def route(dr, frm, to, skip):
+def route(dr, frm, to, skip, crossings=3):
     """A clear path from frm to to: straight when nearly aligned, else one bend (either way round)."""
     options = []
     if abs(frm[0] - to[0]) < 30 or abs(frm[1] - to[1]) < 30:
@@ -76,9 +77,13 @@ def route(dr, frm, to, skip):
         mx = frm[0] + f * (to[0] - frm[0])
         options += [[frm, (frm[0], my), (to[0], my), to], [frm, (mx, frm[1]), (mx, to[1]), to]]
     for pts in options:
-        if clear(dr, pts, skip):
+        if clear(dr, pts, skip, crossings):
             return pts
     return None
+
+
+BRIDGE_REACH = 6000      # px a bridge's metabolite may be linked over (D14)
+BRIDGE_CROSSINGS = 6     # edges such a link may cross
 
 
 def connect(dr, reach=1500, passes=8, hub=30, movable=8):
@@ -109,9 +114,12 @@ def one_pass(dr, reach, hub):
         model.degree = collections.Counter(m for r in model.rxns.values() for m in r["stoich"])
     by_met = collections.defaultdict(list)
     keep = []  # the node elements, kept alive while their id() is used
+    # the metabolites of a bridge (D14) are linked even when they are hubs: joining parts is its purpose
+    bridged = {m for r in getattr(dr, "context", ()) if r in model.rxns for m in model.rxns[r]["stoich"]}
     for n in mp.nodes("met"):
         m = mp.classes(n)[1]
-        if dr.is_main(n) and L.translate(n) and model.name(m) not in L.COFACTORS and model.degree[m] <= hub:
+        if dr.is_main(n) and L.translate(n) and model.name(m) not in L.COFACTORS and (model.degree[m] <= hub or
+                                                                                      m in bridged):
             by_met[mp.classes(n)[1]].append(n)
             keep.append(n)
     biggest = max(size.values()) if size else 0
@@ -123,7 +131,8 @@ def one_pass(dr, reach, hub):
                 if find(id(u)) == find(id(v)) or area_of(pu, boxes) != area_of(pv, boxes):
                     continue
                 d = L.length(L.sub(pu, pv))
-                if d > reach:
+                bridge = any(r in getattr(dr, "context", ()) for r in mp.classes(u)[2:] + mp.classes(v)[2:])
+                if d > (BRIDGE_REACH if bridge else reach):
                     continue
                 su, sv = size[find(id(u))], size[find(id(v))]
                 if su > sv:
@@ -137,8 +146,10 @@ def one_pass(dr, reach, hub):
         pu, pv = L.translate(u), L.translate(v)
         rids = [r for r in mp.classes(u)[2:] if L.is_rxn(r) and r in rpos and r in model.rxns]
         paths = {}
+        bridge = any(r in getattr(dr, "context", ()) for r in mp.classes(u)[2:] + mp.classes(v)[2:])
         for r in rids:
-            pts = route(dr, rpos[r], pv, [(rpos[r], 140), (pv, 80), (pu, 80)])
+            pts = route(dr, rpos[r], pv, [(rpos[r], 140), (pv, 80), (pu, 80)],
+                        BRIDGE_CROSSINGS if bridge else 3)
             if pts is None:
                 break
             paths[r] = pts

@@ -423,6 +423,7 @@ class Drawer:
         self.placed = set()  # ids of reactions placed or moved in this run
         self.lines = []      # lines that paths were laid on (D1/D2), checked for rings (D4)
         self.pending = []    # (reaction, compartment) for placement (D9)
+        self.context = set()  # reactions of other subsystems added as context (D14): drawn without the band
         self.comps_on_map = set()  # compartments the map has an area for, its own compartment included
         self.one_area = ""   # name of the single area all compartments are drawn in (maps without boxes)
         self.kegg = []       # KEGG pathway layouts for this map (D7)
@@ -846,7 +847,8 @@ def draw_missing(dr, rid, comps_on_map):
     # a reaction joining two drawn metabolites goes between them; everything else is placed by D9
     if comp in comps_on_map and any(m in subs for m, _ in anchors) and any(m in prods for m, _ in anchors) \
             and attach_local(dr, rid, subs, prods, anchors):
-        log.append(("D3", "missing reaction added", rid, "between " + ", ".join(model.name(m) for m, _ in anchors),
+        log.append(("D14" if rid in dr.context else "D3", "context reaction drawn" if rid in dr.context else
+                    "missing reaction added", rid, "between " + ", ".join(model.name(m) for m, _ in anchors),
                     model.rxns[rid].get("name", "") or ""))
         return
     dr.pending.append((rid, comp))
@@ -1073,13 +1075,16 @@ def band_groups(mp):
     return out
 
 
-def extend_band(mp, model, band_add):
-    """Band along new main edges, in the group of the reaction's subsystem (a new grey group if the map has none)."""
+def extend_band(mp, model, band_add, skip=frozenset()):
+    """Band along new main edges, in the group of the reaction's subsystem (a new grey group if the map has none).
+    Reactions in skip (context reactions of other subsystems on a subsystem map) get no band."""
     groups = band_groups(mp)
     if not band_add or not groups:
         return
     by_id = {g.get("id"): (g, p) for g, p in groups}
     for rid, line in band_add:
+        if rid in skip:
+            continue
         subs = model.rxns.get(rid, {}).get("subsystem")
         subs = subs if isinstance(subs, list) else [subs]
         target = next((by_id[x] for x in subs if x in by_id), None)

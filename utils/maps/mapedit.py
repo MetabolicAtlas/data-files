@@ -351,7 +351,7 @@ def trim_band(mp, log, reach=25):
 
 
 def edit_map(path, model, out_path, review_path=None, scope=None, added_path=None, kegg=None, relayout=False,
-             hubs=None, mapped=frozenset(), one_area=False):
+             hubs=None, bridges="off", one_area=False):
     mp = Map(path)
     log = []
     marks = collections.defaultdict(set)  # element key -> highlight kind, for the review copy
@@ -514,17 +514,6 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
     dr.kegg = kegg or []
     if hubs:
         dr.hubs = hubs
-    # R10 a reaction of another subsystem that has a map of its own leaves this map (it is drawn there)
-    if scope is not None and scope.subsystems and mapped:
-        for rid in sorted(mp.reactions()):
-            r = model.rxns.get(rid)
-            if not r or scope.contains(rid):
-                continue
-            now = set(r.get("subsystem") if isinstance(r.get("subsystem"), list) else [r.get("subsystem")])
-            if now & mapped:  # drawn on the map of its own subsystem (D3); not here
-                layout.erase_reaction(dr, rid)
-                log.append(("R10", "reaction of another subsystem with its own map, removed from this map", rid,
-                            "; ".join(sorted(x for x in now if x)), r.get("name", "") or ""))
     # the map's own compartment: the most drawn one outside the boxes, or on a blank map the most used by
     # its reactions
     base = None
@@ -550,11 +539,19 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
             if not comps - boxed - set(layout.ALIASES) and base:  # no unboxed compartment named: the map's own
                 comps.add(layout.COMPARTMENT.get(base, ""))
             layout.add_missing(dr, scope, comps)
+            if bridges != "off":
+                import bridges as B
+                limit, _, steps = bridges.partition(":")
+                B.add_bridges(dr, scope, comps, None if limit == "all" else int(limit), int(steps or 1))
         layout.complete_reactions(dr)
         import placement
         placement.place_pending(dr, dr.hubs)
         import connect
         connect.connect(dr)
+        if bridges != "off":
+            import bridges as B
+            B.draw_bridges(dr)
+            B.check_bridges(dr)
     gone += dr.gone
     for n in orphans:
         if n.getparent() is not None and not [c for c in mp.classes(n)[2:] if is_rxn(c)]:
@@ -577,7 +574,10 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
 
     # R7 background band: drop the parts that ran along removed edges and along no remaining edge
     trim_band(mp, log)
-    layout.extend_band(mp, model, dr.band_add)
+    # context reactions (D2 paths and D14 bridges of other subsystems) are drawn without the subsystem's band,
+    # as the original drawings do
+    context = {rid for rid, _ in dr.band_add if scope is not None and scope.subsystems and not scope.contains(rid)}
+    layout.extend_band(mp, model, dr.band_add, skip=context)
     if redrawn:  # D8: the band follows the new drawing
         layout.regenerate_band(mp)
 
@@ -746,6 +746,10 @@ def main():
     ap.add_argument("--one-area", action="store_true",
                     help="subsystem maps without compartment boxes draw all compartments in one area (Yeast-GEM)")
     ap.add_argument("--kegg-mapping", help="subsystem -> KEGG maps JSON (default: subsystem_pathways.json in --kegg-dir)")
+    ap.add_argument("--bridges", default="all",
+                    help="D14: add one-step bridges of other subsystems between unconnected parts of subsystem maps, "
+                         "through metabolites in at most N reactions (a number), 'all' (no limit; default) or 'off'; "
+                         "append ':2' to also allow two-step bridges (e.g. 30:2)")
     ap.add_argument("--hubs", choices=["spread", "mid", "scale"], default="mid",
                     help="crowded KEGG modules: move only the close compounds apart, or scale the module up")
     ap.add_argument("--kegg-relayout", nargs="*", default=[],
@@ -811,7 +815,7 @@ def main():
             log = edit_map(p, model, os.path.join(a.out, name),
                            os.path.join(a.out, name.replace(".svg", ".review.svg")) if a.review else None,
                            scope, os.path.join(a.out, name.replace(".svg", ".added.svg")) if a.review else None,
-                           kegg, name in a.kegg_relayout, a.hubs, frozenset(subsystem_of.values()), a.one_area)
+                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area)
         except Exception as err:  # keep the map unchanged and go on with the others
             import shutil
             import traceback

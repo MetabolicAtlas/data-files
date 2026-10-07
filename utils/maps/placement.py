@@ -347,7 +347,9 @@ def draw(dr, b, o, t, anchors, how):
                                          mp.classes(x)[1] == m and rid in mp.classes(x) and dr.is_main(x)), None)
             if n is not None:
                 created.setdefault(keys[m], n)
-        dr.log.append(("D3", "missing reaction added", rid, how, model.rxns[rid].get("name", "") or ""))
+        ctx = rid in dr.context
+        dr.log.append(("D14" if ctx else "D3", "context reaction drawn" if ctx else "missing reaction added", rid, how,
+                       model.rxns[rid].get("name", "") or ""))
     return created
 
 
