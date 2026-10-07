@@ -72,7 +72,6 @@ jobs:
           path: data-files
           ref: ${{ inputs.continue_branch || github.event.repository.default_branch }}
           fetch-depth: 0
-          lfs: true  # the maps step edits the SVG maps
 
       - name: Set up Python
         uses: actions/setup-python@v5

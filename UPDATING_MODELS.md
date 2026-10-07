@@ -4,10 +4,11 @@ This guide updates one integrated model (for example Human-GEM 1.19.0 to 2.0.0) 
 
 Update one model at a time, straight to its latest release. Metabolic Atlas serves only one version of each model, and the maps are not versioned, so intermediate releases never reach the site and need not be integrated. Stepping through them is only useful to find in which release a problem appeared: run the script with `--version` for each one.
 
-The work has two parts:
+The work has three parts:
 
 1. **Update and check the data files.** `utils/update_model.py` does this. It needs no Docker and runs anywhere with Python and Node.js, including a cluster node.
 2. **Test a local deployment.** This needs Docker. Build the Metabolic Atlas stack with the new files, run its tests and look at the site.
+3. **Publish the maps** to the model's maps repository, after the update is merged. A workflow does this.
 
 ## What the script does
 
@@ -233,6 +234,22 @@ This needs a machine with Docker and `docker compose`, with ports 80, 7474 and 7
     - the GEM repository timeline ends at the new version.
 
 When the deployment works, push the branch and open a pull request with the report summary: the result line, the warnings, and the changes table.
+
+## Part 3: publish the maps
+
+The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `utils/maps/publish_maps.py`, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
+
+The workflow needs the repository secret `MAPS_REPOS_TOKEN`: a token of an account with write access to both maps repositories (a fine-grained token with Contents and Pull requests read and write, on those two repositories). It can also be started by hand from the Actions tab, for one model.
+
+To publish by hand, with python-libsbml, lxml, cairosvg and Pillow installed:
+
+```bash
+git clone https://github.com/SysBioChalmers/Human-maps
+python data-files/utils/maps/publish_maps.py --model Human-GEM --repo Human-maps --summary summary.md
+cd Human-maps && git switch -c maps-2.1.0 && git add -A && git commit -m "feat: maps for Human-GEM 2.1.0"
+```
+
+With the libsbgn schema saved as `utils/maps/schema/SBGN.xsd`, every SBGN-ML file is validated against it; every SBML file is checked with libsbml. The script stops if a file does not pass.
 
 ## Notes for automated runs
 
