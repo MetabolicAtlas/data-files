@@ -23,7 +23,7 @@ The work has three parts:
 | 5. Index | Sets `version` and `date` of the model in `integrated-models/integratedModels.json` | the model is not in the index |
 | 6. Timeline | Writes the model's GitHub releases, up to this version, to `integrated-models/<Model>/gemRepository.json` | the release is not on GitHub |
 | 7. Maps | Fits the SVG maps in `svg/<Model>` to the new version with `utils/maps/mapedit.py` (see [Maps](#maps) below) | the maps are Git LFS pointers |
-| 8. Generate and check | Runs data-generation on the updated files, then `utils/check_generated_data.py`, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
+| 8. Generate and check | Runs data-generation on the updated files, then `check/check_generated_data.py` from data-generation, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
 
 Exit status: `0` all hard checks passed, `1` data-generation or a hard check failed, `2` a manual fix is needed first.
 

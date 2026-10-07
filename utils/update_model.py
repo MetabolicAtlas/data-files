@@ -16,8 +16,8 @@ Steps, in order (see UPDATING_MODELS.md for the full procedure):
      and the script stops: fix the rows by hand and rerun with --keep-files.
   5. Set version and date in integratedModels.json.
   6. Add the model's releases up to this version to its gemRepository.json.
-  7. Run data-generation on the updated files, then check_generated_data.py, which
-     compares the output with the model files and with the baseline.
+  7. Run data-generation on the updated files, then its check/check_generated_data.py,
+     which compares the output with the model files and with the baseline.
 
 Usage:
     python utils/update_model.py --model Human-GEM --version 2.0.0
@@ -211,6 +211,8 @@ def preflight(args, model_dir):
         fail("node is not on PATH (on Vera: module load nodejs/20.13.1-GCCcore-13.3.0)")
     if not os.path.isdir(os.path.join(args.data_generation, "node_modules")):
         fail(f"run 'yarn install --frozen-lockfile' in {args.data_generation} first")
+    if not os.path.exists(os.path.join(args.data_generation, "check", "check_generated_data.py")):
+        fail(f"{args.data_generation} has no check/check_generated_data.py; use a data-generation version that has it")
     utils_js = open(os.path.join(args.data_generation, "utils.js")).read()
     if "formatEcCodes" not in utils_js:
         log("  WARNING: this data-generation does not normalise EC codes or unquote TSV headers;"
@@ -457,7 +459,7 @@ def main():
     run_dir = os.path.join(work, f"{args.model}-{version}")
     run_generation(args.data_generation, run_dir, DATA_FILES)
     report = os.path.join(run_dir, "check_report.md")
-    check = [sys.executable, os.path.join(HERE, "check_generated_data.py"), "--model", args.model,
+    check = [sys.executable, os.path.join(args.data_generation, "check", "check_generated_data.py"), "--model", args.model,
              "--data-files", DATA_FILES, "--data-generation", args.data_generation, "--new", run_dir,
              "--old", baseline, "--old-model-dir", os.path.join(baseline, "model-files"), "--report", report]
     metabolicatlas = os.path.join(os.path.dirname(DATA_FILES), "MetabolicAtlas")
