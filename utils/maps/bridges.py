@@ -313,15 +313,15 @@ def area(mp, comp):
     return (x0, y0, x1, y1), holes
 
 
-def move_group(dr, rids, a_node, t_node, comp, dists=(700, 900, 1200, 1500, 1900, 2400)):
-    """Move the reactions rids as a whole (nodes, edges, band; the shape is kept) so that a_node lands in free
-    space dists px from t_node, inside the compartment's area. Returns the distance and what moved (to move it
-    back), or None."""
+def move_group(dr, rids, a_node, t_node, comp, dists=(450, 600, 800, 1000, 1300, 1700, 2200), tries=6):
+    """Places for the reactions rids as a whole (nodes, edges, band; the shape is kept) with a_node in free
+    space dists px from t_node, inside the compartment's area, nearest first: each is applied in turn and
+    yielded as (distance, what moved); the caller keeps one or lets the next undo it."""
     import math
     mp = dr.mp
     nodes, paths, band = group_elements(mp, rids)
     if not nodes:
-        return None
+        return
     boxes = footprint(mp, nodes, paths)
     grid = obstacles(mp, nodes, paths)
     reg, holes = area(mp, comp)
@@ -334,8 +334,18 @@ def move_group(dr, rids, a_node, t_node, comp, dists=(700, 900, 1200, 1500, 1900
             if fits(boxes, off, grid, reg, holes):
                 shift(mp, nodes, paths, band, off)
                 dr.space = L.Space(mp)
-                return dist, (nodes, paths, band, off)
-    return None
+                yield dist, (nodes, paths, band, off)
+                shift(mp, nodes, paths, band, (-off[0], -off[1]))  # not kept: back where it was
+                dr.space = L.Space(mp)
+                tries -= 1
+                if tries == 0:
+                    return
+                break  # the next distance
+
+
+def compact_boxes(mp):
+    import compact
+    return compact.boxes(mp).items()
 
 
 def part_index(dr):
@@ -472,16 +482,17 @@ def draw_bridges(dr, near=1500):
             root, a_node, t_node, m = small
             if len(members[root]) <= MOVE_MAX:
                 comp = dr.one_area or L.COMPARTMENT.get(comp_of(m), comp_of(m))
-                moved = move_group(dr, members[root], a_node, t_node, comp)
-                if moved is not None:
-                    dist, (nodes, paths, band, off) = moved
+                for dist, (nodes, paths, band, off) in move_group(dr, members[root], a_node, t_node, comp):
                     done = draw_bridge(dr, rid, {ma: na, mb: nb})
                     if done:
+                        # D6 may close the space the part left in its box
+                        for g, b in compact_boxes(mp):
+                            if any(b[0] <= L.translate(n)[0] <= b[2] and b[1] <= L.translate(n)[1] <= b[3]
+                                   for n in nodes[:1] if L.translate(n)):
+                                g.set("data-grown", "1")
                         log.append(("D14", "part moved to join a bridge", rid,
                                     f"{len(members[root])} reaction(s), {dist} px from the other copy", model.name(m)))
-                    else:  # back where it was
-                        shift(mp, nodes, paths, band, (-off[0], -off[1]))
-                        dr.space = L.Space(mp)
+                        break  # kept here; otherwise move_group puts it back and tries the next place
         if not done:
             log.append(("D14", "bridge dropped: no room to draw it", rid, f"{d:.0f} px between the parts",
                         ", ".join(model.name(x) for x in via)))

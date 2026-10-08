@@ -36,6 +36,10 @@ CURRENCY = {"H+", "H2O", "ATP", "ADP", "AMP", "Pi", "PPi", "NAD+", "NADH", "NADP
             "hydrogen peroxide", "bicarbonate", "potassium", "sodium", "chloride", "CMP", "UMP", "GMP",
             "ubiquinone-6", "ubiquinol-6", "ferricytochrome c", "ferrocytochrome c"}
 if __name__ == "__main__":  # one module for this file, also when run as a script (layout.py imports it)
+    # the same maps on every run: placement goes through sets of ids, whose order depends on the hash seed
+    if os.environ.get("PYTHONHASHSEED") != "0":
+        os.environ["PYTHONHASHSEED"] = "0"
+        os.execv(sys.executable, [sys.executable] + sys.argv)
     sys.modules.setdefault("mapedit", sys.modules[__name__])
 
 SUFFIX = {"p": "x", "s": "e"}
@@ -351,7 +355,7 @@ def trim_band(mp, log, reach=25):
 
 
 def edit_map(path, model, out_path, review_path=None, scope=None, added_path=None, kegg=None, relayout=False,
-             hubs=None, bridges="off", one_area=False):
+             hubs=None, bridges="off", one_area=False, map_names=frozenset()):
     mp = Map(path)
     log = []
     marks = collections.defaultdict(set)  # element key -> highlight kind, for the review copy
@@ -578,6 +582,8 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
     # as the original drawings do
     context = {rid for rid, _ in dr.band_add if scope is not None and scope.subsystems and not scope.contains(rid)}
     layout.extend_band(mp, model, dr.band_add, skip=context)
+    if scope:
+        rename_bands(mp, model, scope, map_names, log)
     if redrawn:  # D8: the band follows the new drawing
         layout.regenerate_band(mp)
 
@@ -643,6 +649,67 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
     if review_path:
         write_review(review_root, removed, marks, log, review_path)
     return log
+
+
+def rename_bands(mp, model, scope, map_names, log):
+    """R12: a band (subsystem group) whose id is not a subsystem of the model gets the current name: on a subsystem
+    map the map's subsystem, on a compartment map the subsystem of most (at least 60%) of the reactions on it. A
+    band that would take the id of another band joins it. A label or title that repeats the old id gets the new
+    name. Remnants (trimmed by R7) with no reaction on them are removed, with their label; with one or two they
+    join their subsystem's band without the label. Bands named after their map (Yeast-GEM compartment maps) are
+    left alone."""
+    import layout
+    current = set()
+    for r in model.rxns.values():
+        subs = r.get("subsystem")
+        current |= {x for x in (subs if isinstance(subs, list) else [subs]) if x}
+    groups = layout.band_groups(mp)
+    by_id = {g.get("id"): (g, p) for g, p in groups}
+    rpos = {rid: translate(n) for rid, n in mp.reactions().items()}
+    norm = lambda x: " ".join((x or "").split()).lower()  # noqa: E731
+    for g, path in groups:
+        gid = g.get("id")
+        if gid in current or gid in map_names:
+            continue
+        if scope.subsystems and len(scope.subsystems) == 1:
+            target = next(iter(scope.subsystems))
+        else:
+            segs = [(a, b) for sp in (subpaths(path.get("d") or "") or []) for a, b in zip(sp, sp[1:])]
+            count = collections.Counter()
+            for rid, q in rpos.items():
+                if q and rid in model.rxns and any(seg_dist(q, a, b) <= 60 for a, b in segs):
+                    subs = model.rxns[rid].get("subsystem")
+                    subs = subs if isinstance(subs, list) else [subs]
+                    if subs and subs[0]:
+                        count[subs[0]] += 1
+            if not count:  # a remnant with no reaction on it (or only a label): it goes
+                g.getparent().remove(g)
+                log.append(("R12", "band of a subsystem not in the model removed (no reaction on it)", gid, "", ""))
+                continue
+            target, n = count.most_common(1)[0]
+            if sum(count.values()) < 3:  # a remnant with one or two reactions: it joins their band, without its label
+                for t in list(g.iter(SVG + "text")):
+                    t.getparent().remove(t)
+            elif n < 0.6 * sum(count.values()):
+                log.append(("review", "band name not current, reactions on it of several subsystems", gid,
+                            ", ".join(f"{k} {v}" for k, v in count.most_common(3)), ""))
+                continue
+        for t in g.iter(SVG + "text"):
+            if norm("".join(t.itertext())) == norm(gid):
+                for child in list(t):
+                    t.remove(child)
+                t.text = target
+        if target in by_id and by_id[target][0] is not g:
+            og, other = by_id[target]
+            other.set("d", ((other.get("d") or "") + " " + (path.get("d") or "")).strip())
+            for t in list(g.iter(SVG + "text")):  # the label goes with it, where it was
+                og.append(t)
+            g.getparent().remove(g)
+            log.append(("R12", "band joined the band of its current subsystem", gid, target, ""))
+        else:
+            g.set("id", target)
+            by_id[target] = (g, path)
+            log.append(("R12", "band renamed to its current subsystem", gid, target, ""))
 
 
 def write_added(root, placed, path):
@@ -757,6 +824,8 @@ def main():
     a = ap.parse_args()
     import layout
     subsystem_of = read_map_table(a.map_table) if a.map_table else {}
+    map_names = frozenset(line.rstrip("\n").split("\t")[1] for t in (a.map_table, a.compartment_table) if t
+                          for line in open(t) if line.count("\t") >= 2 and not line.startswith(("#", "@")))
     compartment_of = read_map_table(a.compartment_table) if a.compartment_table else {}
     layout.GENE_LABEL = a.gene_label
     model = Model(a.model_yml, a.model_dir, a.old_ymls)
@@ -815,7 +884,7 @@ def main():
             log = edit_map(p, model, os.path.join(a.out, name),
                            os.path.join(a.out, name.replace(".svg", ".review.svg")) if a.review else None,
                            scope, os.path.join(a.out, name.replace(".svg", ".added.svg")) if a.review else None,
-                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area)
+                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area, map_names)
         except Exception as err:  # keep the map unchanged and go on with the others
             import shutil
             import traceback

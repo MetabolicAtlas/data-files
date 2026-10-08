@@ -378,7 +378,7 @@ def place_pending(dr, hubs="mid"):
         index = node_index(dr)
 
         def drawn(created):
-            for n in set(created.values()):
+            for n in dict.fromkeys(created.values()):  # drawing order, not memory order
                 m, q = mp.classes(n)[1], L.translate(n)
                 if q and not any(x is n for _, x in index[m]):
                     index[m].append((q, n))

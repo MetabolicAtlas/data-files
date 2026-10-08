@@ -228,7 +228,7 @@ def move_parts(dr, failed, moved, movable):
                     dr.log.append(("review", "part could not be placed again", b.steps[0][0], comp, ""))
                     continue
                 created = P.draw(dr, b, f[0], f[1], {}, "moved next to its other copy (D10)")
-            for n in set(created.values()):
+            for n in dict.fromkeys(created.values()):  # drawing order, not memory order
                 q = L.translate(n)
                 if q:
                     index[mp.classes(n)[1]].append((q, n))
