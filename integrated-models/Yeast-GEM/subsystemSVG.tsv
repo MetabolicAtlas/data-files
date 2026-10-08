@@ -77,3 +77,30 @@ Taurine and hypotaurine metabolism	Taurine and hypotaurine metabolism	taurine_an
 Threonylcarbamoyladenosine metabolism	Threonylcarbamoyladenosine metabolism	threonylcarbamoyladenosine_metabolism.svg
 DNA repair	DNA repair	dna_repair.svg
 Insect hormone biosynthesis	Insect hormone biosynthesis	insect_hormone_biosynthesis.svg
+Transport [c, ce]	Transport [c, ce]	transport_c_ce.svg
+Transport [c, e]	Transport [c, e]	transport_c_e.svg
+Transport [c, er]	Transport [c, er]	transport_c_er.svg
+Transport [c, erm]	Transport [c, erm]	transport_c_erm.svg
+Transport [c, g]	Transport [c, g]	transport_c_g.svg
+Transport [c, gm]	Transport [c, gm]	transport_c_gm.svg
+Transport [c, lp]	Transport [c, lp]	transport_c_lp.svg
+Transport [c, m]	Transport [c, m]	transport_c_m.svg
+Transport [c, mm]	Transport [c, mm]	transport_c_mm.svg
+Transport [c, n]	Transport [c, n]	transport_c_n.svg
+Transport [c, p]	Transport [c, p]	transport_c_p.svg
+Transport [c, v]	Transport [c, v]	transport_c_v.svg
+Transport [c, vm]	Transport [c, vm]	transport_c_vm.svg
+Transport [ce, erm]	Transport [ce, erm]	transport_ce_erm.svg
+Transport [e, ce]	Transport [e, ce]	transport_e_ce.svg
+Transport [er, g]	Transport [er, g]	transport_er_g.svg
+Transport [erm, er]	Transport [erm, er]	transport_erm_er.svg
+Transport [erm, gm]	Transport [erm, gm]	transport_erm_gm.svg
+Transport [erm, lp]	Transport [erm, lp]	transport_erm_lp.svg
+Transport [erm, mm]	Transport [erm, mm]	transport_erm_mm.svg
+Transport [erm, n]	Transport [erm, n]	transport_erm_n.svg
+Transport [erm, vm]	Transport [erm, vm]	transport_erm_vm.svg
+Transport [m, mm]	Transport [m, mm]	transport_m_mm.svg
+Transport [m, v]	Transport [m, v]	transport_m_v.svg
+Transport [p, m]	Transport [p, m]	transport_p_m.svg
+Transport [vm, ce]	Transport [vm, ce]	transport_vm_ce.svg
+Transport [vm, gm]	Transport [vm, gm]	transport_vm_gm.svg
