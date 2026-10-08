@@ -39,7 +39,7 @@ The maps are edited in place, keeping their drawing: identifiers follow the mode
 
 Open a few review copies, the maps with the most changes first. Maps without compartment boxes (Yeast-GEM's) draw every compartment in one area, and their gene boxes show the gene name over its identifier; `--gene-label` sets this. With `--kegg-dir <cache>` (made by `utils/maps/kegg_fetch.py`), added reactions that a KEGG map of their subsystem shows keep KEGG's arrangement. `--skip-maps` leaves the maps unchanged. New maps (for a subsystem or compartment without one) are not made by this step; `utils/maps/newmap.py` makes a blank map to start from.
 
-Transport maps (Human-GEM's "Transport: ..." maps, one per membrane) are not edited but written again from the new model with `utils/maps/transport_map.py`, together with their rows in `subsystemSVG.tsv`: a membrane can gain or lose a map when its number of reactions changes. To add transport maps to a model that has none, run `transport_map.py <yml> <model folder> <a subsystem map as template> svg/<Model> integrated-models/<Model>/subsystemSVG.tsv` once.
+Transport maps (Human-GEM's "Transport: ..." maps, one per membrane, and Yeast-GEM's "Transport [a, b]" maps, one per transport subsystem) are not edited but written again from the new model with `utils/maps/transport_map.py`, together with their rows in `subsystemSVG.tsv`: a membrane can gain or lose a map when its reactions change. To add transport maps to a model that has none, run `transport_map.py <yml> <model folder> <a subsystem map as template> svg/<Model> integrated-models/<Model>/subsystemSVG.tsv` once (with `--gene-label both` for maps without compartment boxes, as Yeast-GEM's).
 
 ## Automated updates
 

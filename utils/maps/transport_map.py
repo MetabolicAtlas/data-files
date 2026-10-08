@@ -16,13 +16,21 @@ for the protons of proton symport) is drawn on the outer side of the membrane it
 Reactions between two compartments other than the cytosol (vesicular transport, lipid flip-flop) share one map,
 grouped by compartment pair; each group has its own membrane line, with the first compartment on the left.
 
-The band of Transport reactions runs along the membrane; reactions of other subsystems that cross the same
-membrane are drawn too, as context, with a gap in the band. The maps are written whole from the model on every
-update, with their rows in subsystemSVG.tsv; mapedit leaves maps marked data-transport alone.
+A model that files its transport reactions by membrane, in subsystems named "Transport [a, b]" (Yeast-GEM), gets a
+map per such subsystem instead, named after it: a box for an organelle (or for the cell, when the other side is
+the extracellular space or the cell envelope), and a membrane line, with a on the left, for a pair without the
+cytosol.
 
-usage: transport_map.py <model yml> <model dir> <template svg> <svg dir> <subsystemSVG.tsv>
+The band of the transport subsystem runs along the membrane; reactions of other subsystems that cross the same
+membrane are drawn too, as context, with a gap in the band (on maps of a per-membrane subsystem only those that
+carry a metabolite across: the model files the others, such as lipid pseudo-reactions, elsewhere). The maps
+are written whole from the model on every update, with their rows in subsystemSVG.tsv; mapedit leaves maps
+marked data-transport alone.
+
+usage: transport_map.py <model yml> <model dir> <template svg> <svg dir> <subsystemSVG.tsv> [--gene-label name|orf|both]
 """
 
+import argparse
 import collections
 import math
 import os
@@ -35,7 +43,9 @@ import mapedit as me  # noqa: E402
 import newmap  # noqa: E402
 
 SUBSYSTEM = "Transport reactions"
+PAIR = re.compile(r"^Transport\s*\[\s*(\w+)\s*,\s*(\w+)\s*\]$")  # a per-membrane transport subsystem
 CYTOSOL, OUTSIDE = "c", "e"
+OUTSIDE_WORDS = ("extracellular", "envelope", "wall", "periplasm")  # compartments outside the cell
 TINY = 5                 # metabolites: a smaller compartment is drawn on the outer side of its membrane
 MAX_ROWS = 600           # reactions on one map
 D_OUT, D_IN = 280, 150   # px from the membrane to the metabolite node outside and inside
@@ -52,6 +62,8 @@ MARGIN = 260             # map edge to the outermost node or label
 BETWEEN = 280            # between the reach of two boxes or membrane lines
 MIN_GROUP = 3            # reactions a transporter needs for a group of its own
 ASPECT = 1.4             # width / height the number of boxes aims at
+COLOUR = "#64ff64"       # band and title
+MIN_COLUMN = 10          # rows a column needs before the rows are shared with another box or line
 
 
 def compartment(model, m):
@@ -66,9 +78,19 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
-def rows_of(model, outer, inner):
+def norm(subsystem):
+    return re.sub(r"\s+", "", subsystem or "").lower()
+
+
+def subsystems_of(model, rid):
+    subs = model.rxns[rid].get("subsystem")
+    return {norm(x) for x in (subs if isinstance(subs, list) else [subs]) if x}
+
+
+def rows_of(model, outer, inner, subsystem=None):
     """The reactions with metabolites in `inner` and in the compartments `outer` (a set) only, each as (rid, lanes,
-    dots, inner): lanes are (outside metabolite, inside metabolite) pairs (either can be None), dots the others."""
+    dots, inner): lanes are (outside metabolite, inside metabolite) pairs (either can be None), dots the others.
+    With a per-membrane subsystem, reactions of other subsystems only when a metabolite crosses."""
     out = []
     for rid, r in model.rxns.items():
         st = r["stoich"]
@@ -82,6 +104,8 @@ def rows_of(model, outer, inner):
         for m in st:
             by_name[model.name(m)][side[m]] = m
         crossing = [n for n, d in by_name.items() if len(d) == 2 and st[d["out"]] * st[d["in"]] < 0]
+        if subsystem and not crossing and norm(subsystem) not in subsystems_of(model, rid):
+            continue
         main = [n for n in crossing if n not in L.COFACTORS]
         if main:
             lanes = [(by_name[n]["out"], by_name[n]["in"]) for n in main]
@@ -99,9 +123,43 @@ def rows_of(model, outer, inner):
     return out
 
 
+def outside_like(c):
+    return any(w in name_of(c).lower() for w in OUTSIDE_WORDS)
+
+
+def per_membrane(model):
+    """The maps of a model with per-membrane transport subsystems: one per subsystem."""
+    spellings = collections.defaultdict(collections.Counter)  # compartment pair -> names of its subsystem
+    for rid, r in model.rxns.items():
+        subs = r.get("subsystem")
+        for x in (subs if isinstance(subs, list) else [subs]):
+            m = PAIR.match(x or "")
+            if m:
+                spellings[frozenset(m.groups())][x] += 1
+    out = []
+    for pair, names in spellings.items():
+        sub = names.most_common(1)[0][0]
+        a, b = PAIR.match(sub).groups()
+        other = b if a == CYTOSOL else a
+        if CYTOSOL in pair and not outside_like(other):
+            kind, outer, inner = "box", {CYTOSOL}, other
+        elif CYTOSOL in pair:
+            kind, outer, inner = "box", {other}, CYTOSOL
+        else:
+            kind, outer, inner = "line", {a}, b
+        rows = rows_of(model, outer, inner, sub)
+        if rows:
+            out.append(dict(stem=slug(sub), title=sub, kind=kind, outer=outer, inner=inner, rows=rows, subsystem=sub))
+    return sorted(out, key=lambda x: x["stem"])
+
+
 def membranes(model):
-    """The maps to write: [(file stem, title, kind, groups)], kind "box" with groups keyed by transporter, or
-    "pairs" with one group per compartment pair."""
+    """The maps to write, as dicts: file stem, title, kind ("box": rows grouped by transporter on the edges of the
+    inner compartment's boxes; "line": the same on membrane lines; "pairs": one group per compartment pair), outer
+    compartments, inner compartment, rows and the subsystem of the band."""
+    if any(PAIR.match(x or "") for r in model.rxns.values()
+           for x in (r.get("subsystem") if isinstance(r.get("subsystem"), list) else [r.get("subsystem")])):
+        return per_membrane(model)
     count = collections.Counter(compartment(model, m) for m in model.mets)
     tiny = {c for c, n in count.items() if n < TINY}
     sets = collections.Counter()
@@ -123,12 +181,13 @@ def membranes(model):
     for inner, outer, stem, title in specs:
         rows = rows_of(model, outer, inner)
         if rows:
-            out.append((stem, title, "box", outer, inner, rows))
+            out.append(dict(stem=stem, title=title, kind="box", outer=outer, inner=inner, rows=rows, subsystem=SUBSYSTEM))
     pairs = sorted({tuple(sorted(cs, key=lambda c: (c != OUTSIDE, name_of(c)))) for cs in sets
                     if len(cs) == 2 and not covered(cs)})
     rows = [row for a, b in pairs for row in rows_of(model, {a}, b)]
     if rows:
-        out.append(("transport_between_organelles", "Transport: between organelles", "pairs", None, None, rows))
+        out.append(dict(stem="transport_between_organelles", title="Transport: between organelles", kind="pairs",
+                        outer=None, inner=None, rows=rows, subsystem=SUBSYSTEM))
     return out
 
 
@@ -306,8 +365,9 @@ def columns(items, n):
 
 
 def items_of(model, rows, kind):
-    """The rows as a sequence of group headings and rows: by transporter ("box") or compartment pair ("pairs")."""
-    if kind == "box":
+    """The rows as a sequence of group headings and rows: by transporter ("box", "line") or compartment pair
+    ("pairs")."""
+    if kind != "pairs":
         key = group_keys(model, rows)
         group = {row[0]: key[row[0]] for row in rows}
     else:
@@ -319,19 +379,19 @@ def items_of(model, rows, kind):
         groups[group[row[0]]].append(row)
     for g in groups.values():
         g.sort(key=lambda r: (min(model.name(m).lower() for lane in r[1] for m in lane if m), r[0]))
-    if kind == "box":
+    if kind != "pairs":
         order = sorted(groups, key=lambda k: (k == "", k == "Other genes", -len(groups[k]), k))
     else:
         order = sorted(groups, key=lambda k: (k[0] != OUTSIDE, name_of(k[0]), name_of(k[1])))
     items = []
     for k in order:
-        label = (k or "No gene") if kind == "box" else f"{name_of(k[0])} | {name_of(k[1])}"
-        items.append(("head", GROUP_GAP, {"label": label, "n": len(groups[k]), "pair": None if kind == "box" else k}))
+        label = (k or "No gene") if kind != "pairs" else f"{name_of(k[0])} | {name_of(k[1])}"
+        items.append(("head", GROUP_GAP, {"label": label, "n": len(groups[k]), "pair": k if kind == "pairs" else None}))
         items += [("row", row_height(model, r), r) for r in groups[k]]
     return items
 
 
-def write_map(model, template, path, title, kind, outer, inner, items, colour=None):
+def write_map(model, template, path, title, kind, outer, inner, items, subsystem, colour=None):
     """One transport map from its items; returns (boxes or membrane lines, reactions, context reactions)."""
     rows = [x for k, _, x in items if k == "row"]
     total = sum(h for _, h, _ in items)
@@ -347,6 +407,8 @@ def write_map(model, template, path, title, kind, outer, inner, items, colour=No
         unit, per = reach + reach_in + BETWEEN, 1
     best = None
     for k in range(1, 13):  # as many boxes or lines as bring the map closest to ASPECT
+        if k > 1 and len(rows) < MIN_COLUMN * per * k:
+            break
         w = k * unit - BETWEEN + 2 * MARGIN
         h = TOP + total / (per * k) + 300
         score = abs(w / h - ASPECT) / ASPECT
@@ -355,21 +417,17 @@ def write_map(model, template, path, title, kind, outer, inner, items, colour=No
     _, n, width = best
     cols = columns(items, per * n)
     height = TOP + max(sum(h for _, h, _ in c) for c in cols) + 300
-    newmap.blank(template, title, path, width, height, colour)
+    newmap.blank(template, title, path, width, height, colour or COLOUR)
     mp = me.Map(path)
     mp.root.attrib.pop("data-new", None)
-    mp.root.set("data-transport", f"{''.join(sorted(outer))} {inner}" if kind == "box" else "pairs")
+    mp.root.set("data-transport", f"{''.join(sorted(outer))} {inner}" if kind != "pairs" else "pairs")
     mp.root.set("data-modelversion", model.version)
     band = None
     for g, p in L.band_groups(mp):
-        g.set("id", SUBSYSTEM)
+        g.set("id", subsystem)
         band = p
     dr = L.Drawer(mp, model, [])
-    context = set()
-    for row in rows:
-        subs = model.rxns[row[0]].get("subsystem")
-        if SUBSYSTEM not in (subs if isinstance(subs, list) else [subs]):
-            context.add(row[0])
+    context = {row[0] for row in rows if norm(subsystem) not in subsystems_of(model, row[0])}
     notes = L.element("g", id="transport-groups", **{"class": "note"})
     band_lines, lines, places = [], [], []
     for c, col in enumerate(cols):
@@ -381,14 +439,21 @@ def write_map(model, template, path, title, kind, outer, inner, items, colour=No
         else:
             membrane, s = MARGIN + reach + c * unit, -1
         y, run, line = TOP - GROUP_GAP + 40, [], None
+        if kind == "line" and col:  # the two compartments over each membrane line
+            (a,), b = tuple(outer), inner
+            for c_, x_, anchor in ((a, membrane - 46, "end"), (b, membrane + 46, "start")):
+                parts = L.wrap(name_of(c_), 16, 3)
+                for k, part in enumerate(parts):
+                    notes.append(heading(part, x_, TOP - 150 - 46 * (len(parts) - 1 - k), 40, anchor))
         for what, h, x in col:
             if what == "head":
                 if run:
                     band_lines.append(run)
                     run = []
-                if line:
+                if line and kind == "pairs":
                     lines.append(line)
-                if kind == "box":
+                    line = None
+                if kind != "pairs":
                     notes.append(heading(f"{x['label']} ({x['n']})", membrane + s * 46, y + GROUP_GAP - 50, 30,
                                          "end" if s < 0 else "start", "#555"))
                 else:
@@ -398,7 +463,6 @@ def write_map(model, template, path, title, kind, outer, inner, items, colour=No
                                          "end", "#555"))
                     notes.append(heading(name_of(b), membrane + 46, y + GROUP_GAP - 50, 30, "start", "#555"))
                 y += GROUP_GAP
-                line = None
                 continue
             above, below = row_extent(model, x[1], x[2], model.rxns[x[0]]["genes"])
             y += above
@@ -433,7 +497,7 @@ def write_map(model, template, path, title, kind, outer, inner, items, colour=No
         h.append(heading(name_of(main_outer), MARGIN + reach / 2, top + 120, 72))
         mp.layer["fes"].addprevious(h)
         h.tail = "\n  "
-    else:  # the membrane lines, one per group
+    else:  # the membrane lines: one per column, or per group of a compartment pair
         notes.append(L.element("path", **{"d": L.to_d(lines), "fill": "none", "stroke": "#000", "stroke-width": "22"}))
     mp.layer["fes"].addprevious(notes)
     notes.tail = "\n  "
@@ -458,19 +522,20 @@ def write_all(model, template, svg_dir, table):
     """Every transport map of the model into svg_dir, and their rows in the subsystem map table; transport maps
     written before and not now are removed."""
     written = []
-    for stem, title, kind, outer, inner, rows in membranes(model):
+    for spec in membranes(model):
+        stem, title, kind, outer, inner, rows = (spec[k] for k in ("stem", "title", "kind", "outer", "inner", "rows"))
         items = items_of(model, rows, kind)
         parts = columns(items, math.ceil(len(rows) / MAX_ROWS)) if len(rows) > MAX_ROWS else [items]
         for k, part in enumerate(parts):
             name = f"{stem}_{k + 1}" if len(parts) > 1 else stem
             ttl = f"{title} {k + 1} ({part_label(part)})" if len(parts) > 1 else title
             n, nrows, nctx = write_map(model, template, os.path.join(svg_dir, name + ".svg"), ttl, kind, outer, inner,
-                                       part)
-            written.append((name + ".svg", ttl))
+                                       part, spec["subsystem"])
+            written.append((name + ".svg", ttl, spec["subsystem"]))
             groups = sum(1 for what, _, _ in part if what == "head")
             print(f"{name}.svg: {nrows} reactions ({nctx} of other subsystems), {groups} groups, "
                   f"{n} {'box(es)' if kind == 'box' else 'membrane line(s)'}", flush=True)
-    names = {f for f, _ in written}
+    names = {f for f, _, _ in written}
     for f in sorted(os.listdir(svg_dir)):
         p = os.path.join(svg_dir, f)
         if f.startswith("transport_") and f.endswith(".svg") and f not in names and "data-transport=" in open(p).read(2000):
@@ -478,14 +543,21 @@ def write_all(model, template, svg_dir, table):
             print("removed", f)
     lines = open(table).read().rstrip("\n").split("\n")
     keep = [x for x in lines if not re.match(r"[^\t]*\t[^\t]*\ttransport_[a-z0-9_]+\.svg\s*$", x)]
-    keep += [f"{SUBSYSTEM}\t{t}\t{f}" for f, t in written]
+    keep += [f"{sub}\t{t}\t{f}" for f, t, sub in written]
     with open(table, "w") as fh:
         fh.write("\n".join(keep) + "\n")
     return written
 
 
 def main():
-    yml, model_dir, template, svg_dir, table = sys.argv[1:6]
+    ap = argparse.ArgumentParser(description="Write every transport map of a model, with their rows in subsystemSVG.tsv.")
+    for arg in ("model_yml", "model_dir", "template", "svg_dir", "table"):
+        ap.add_argument(arg)
+    ap.add_argument("--gene-label", choices=["name", "orf", "both"], default="name",
+                    help="gene boxes show the gene name, the gene id, or the name over the id")
+    a = ap.parse_args()
+    L.GENE_LABEL = a.gene_label
+    yml, model_dir, template, svg_dir, table = a.model_yml, a.model_dir, a.template, a.svg_dir, a.table
     model = me.Model(yml, model_dir, [])
     written = write_all(model, template, svg_dir, table)
     print(f"{len(written)} transport maps; rows written to {table}")

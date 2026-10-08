@@ -247,13 +247,14 @@ def update_maps(args, model_dir, new_yaml, old_yaml, work_maps, summary_path):
         tables = os.path.join(work_maps, "model-tables")
         subprocess.run([sys.executable, os.path.join(HERE, "maps", "yaml_to_tsv.py"), new_yaml, tables],
                        check=True, stdout=subprocess.DEVNULL)
-    boxed = any(b'class="compartment"' in open(m, "rb").read() for m in maps)
+    boxed = any(b'class="compartment"' in open(m, "rb").read() for m in maps if b"data-transport=" not in open(m, "rb").read(3000))
+    gene_label = args.gene_label or ("name" if boxed else "both")
     cmd = [sys.executable, os.path.join(HERE, "maps", "mapedit.py"), new_yaml, tables, old_yaml,
            "--maps", *maps, "--out", out, "--review",
            "--map-table", os.path.join(model_dir, "subsystemSVG.tsv"),
            "--compartment-table", os.path.join(model_dir, "compartmentSVG.tsv"),
            "--custom-table", os.path.join(model_dir, "customSVG.tsv"),
-           "--gene-label", args.gene_label or ("name" if boxed else "both")]
+           "--gene-label", gene_label]
     if not boxed:
         cmd.append("--one-area")  # maps without compartment boxes draw every compartment in one area
     if args.kegg_dir:
@@ -277,7 +278,7 @@ def update_maps(args, model_dir, new_yaml, old_yaml, work_maps, summary_path):
         template = next(os.path.join(svg_dir, f) for f in listed
                         if os.path.join(svg_dir, f) in maps and os.path.join(svg_dir, f) not in transport)
         result = subprocess.run([sys.executable, os.path.join(HERE, "maps", "transport_map.py"), new_yaml, tables,
-                                 template, svg_dir, os.path.join(model_dir, "subsystemSVG.tsv")],
+                                 template, svg_dir, os.path.join(model_dir, "subsystemSVG.tsv"), "--gene-label", gene_label],
                                 capture_output=True, text=True)
         if result.returncode:
             transport_note = "; transport maps left unchanged (transport_map.py failed)"
