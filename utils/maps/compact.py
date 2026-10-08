@@ -17,6 +17,7 @@ from mapedit import SVG, subpaths, to_d, translate
 
 MARGIN = 200   # px kept between the content and the canvas edge
 KEEP = 250     # px an empty stripe is narrowed to
+TITLE_GAP = 60  # px between the title and a drawing moved down from under it
 MIN_GAP = 400  # narrower empty stripes are left alone
 
 
@@ -327,11 +328,19 @@ def content(mp, title):
     return out
 
 
-def compact(mp, log, title=None):
-    """D13: narrow empty stripes across the whole map, cut the canvas to the content, centre the title."""
+def compact(mp, log, title=None, rounds=3):
+    """D13: narrow empty stripes across the whole map, cut the canvas to the content, centre the title; again until
+    nothing changes (moving the drawing from under the title can leave a margin to cut)."""
+    for _ in range(rounds):
+        if not compact_once(mp, log, title):
+            return
+
+
+def compact_once(mp, log, title=None):
+    """One D13 round; False when it changes nothing."""
     items = content(mp, title)
     if not items:
-        return
+        return False
     tb = L.text_box(title) if title is not None else None
     cw, ch = float(mp.root.get("width")), float(mp.root.get("height"))
     cuts = {}
@@ -376,15 +385,28 @@ def compact(mp, log, title=None):
             w = need
         else:
             w = max(w, need)
+    # the title sits above the drawing: content that would lie under it, where it ends up, moves down with the rest
+    down = 0.0
+    if p:
+        tw = tb[2] - tb[0]
+        tx0, tx1, ty0, ty1 = w / 2 - tw / 2, w / 2 + tw / 2, shift(tb[1], 1), shift(tb[3], 1)
+        for b in items:
+            (x0, y0), (x1, y1) = f((b[0], b[1])), f((b[2], b[3]))
+            if x0 + dx < tx1 and x1 + dx > tx0 and y0 < ty1 and y1 > ty0:  # under the title, not just near it
+                down = max(down, ty1 + TITLE_GAP - y0)
+        down = down if down > 1 else 0.0  # rounding is not a change
+        h += down
     # nothing to do when the content would move (cuts and centring together) and the canvas change by less than
     # a pixel: rounding is not a change
-    if abs(w - cw) <= 1 and abs(h - ch) <= 1 and all(abs(f(q)[0] + dx - q[0]) <= 1 and abs(f(q)[1] - q[1]) <= 1
-                                                     for b in items for q in ((b[0], b[1]), (b[2], b[3]))):
-        return
+    if abs(w - cw) <= 1 and abs(h - ch) <= 1 and not down and all(
+            abs(f(q)[0] + dx - q[0]) <= 1 and abs(f(q)[1] - q[1]) <= 1 for b in items for q in ((b[0], b[1]), (b[2], b[3]))):
+        return False
     apply(mp, f, rect_f, skip_texts=(title,) if title is not None else ())
-    if dx:
-        apply(mp, lambda q: (q[0] + dx, q[1]), lambda g, b: (b[0] + dx, b[1], b[2] + dx, b[3]),
+    if dx or down:
+        apply(mp, lambda q: (q[0] + dx, q[1] + down), lambda g, b: (b[0] + dx, b[1] + down, b[2] + dx, b[3] + down),
               skip_texts=(title,))
+    if down:
+        log.append(("D13", "drawing moved down from under the title", "", f"{down:.0f} px", ""))
     if p:
         half = (tb[2] - tb[0] - 20) / 2
         x = w / 2 if title.get("text-anchor") == "middle" or (title.getparent() is not None and
@@ -397,7 +419,7 @@ def compact(mp, log, title=None):
     elif abs(nw - cw) > 1 or abs(nh - ch) > 1 or any(cuts[a][0] for a in (0, 1)):  # not for rounding differences
         set_canvas(mp, nw, nh)
         # separator lines between compartments end where the content ends
-        last_y = shift(cuts[1][1], 1)
+        last_y = shift(cuts[1][1], 1) + down
         for g in mp.root.iter(SVG + "g"):
             if g.get("class") == "compartment":
                 for path in g.iter(SVG + "path"):
@@ -408,3 +430,4 @@ def compact(mp, log, title=None):
         ny = sum(r for _, _, r in cuts[1][0])
         log.append(("D13", "white space closed", "", f"{nx:.0f} px narrower inside, {ny:.0f} px lower inside",
                     f"canvas {cw:.0f} x {ch:.0f} -> {nw:.0f} x {nh:.0f}"))
+    return True

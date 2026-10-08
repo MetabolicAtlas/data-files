@@ -356,7 +356,7 @@ def trim_band(mp, log, reach=25):
 
 
 def edit_map(path, model, out_path, review_path=None, scope=None, added_path=None, kegg=None, relayout=False,
-             hubs=None, bridges="off", one_area=False, map_names=frozenset(), cofactors="added"):
+             hubs=None, bridges="off", one_area=False, map_names=frozenset(), cofactors="added", map_name=None):
     mp = Map(path)
     log = []
     if mp.root.get("data-transport"):  # written whole from the model by transport_map.py
@@ -640,10 +640,10 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
         import compact
         compact.remove_empty_boxes(mp, log)
         compact.settle_boxes(mp, log)
-        title = None
-        if scope.subsystems:
-            title = next((g.find(SVG + "text") for g in mp.root.iter(SVG + "g") if g.get("class") == "subsystem"
-                          and g.find(SVG + "text") is not None), None)
+        # the map's title: the text of a subsystem map's band, or of a band named after the map itself (Yeast-GEM's
+        # compartment maps); other bands' texts are labels within the drawing
+        title = next((g.find(SVG + "text") for g in mp.root.iter(SVG + "g") if g.get("class") == "subsystem"
+                      and g.find(SVG + "text") is not None and (scope.subsystems or g.get("id") == map_name)), None)
         if cofactors != "off":  # before D13, which closes the space and centres the content as it ends up
             import declutter
             declutter.declutter(dr, cofactors)
@@ -882,8 +882,10 @@ def main():
     a = ap.parse_args()
     import layout
     subsystem_of = read_map_table(a.map_table) if a.map_table else {}
-    map_names = frozenset(line.rstrip("\n").split("\t")[1] for t in (a.map_table, a.compartment_table) if t
-                          for line in open(t) if line.count("\t") >= 2 and not line.startswith(("#", "@")))
+    own_name = {f[2].strip(): f[1] for t in (a.map_table, a.compartment_table) if t
+                for f in (line.rstrip("\n").split("\t") for line in open(t))
+                if len(f) >= 3 and not f[0].startswith(("#", "@"))}  # file -> map name
+    map_names = frozenset(own_name.values())
     compartment_of = read_map_table(a.compartment_table) if a.compartment_table else {}
     layout.GENE_LABEL = a.gene_label
     model = Model(a.model_yml, a.model_dir, a.old_ymls)
@@ -942,7 +944,8 @@ def main():
             log = edit_map(p, model, os.path.join(a.out, name),
                            os.path.join(a.out, name.replace(".svg", ".review.svg")) if a.review else None,
                            scope, os.path.join(a.out, name.replace(".svg", ".added.svg")) if a.review else None,
-                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area, map_names, a.cofactors)
+                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area, map_names, a.cofactors,
+                           own_name.get(name))
         except Exception as err:  # keep the map unchanged and go on with the others
             import shutil
             import traceback
