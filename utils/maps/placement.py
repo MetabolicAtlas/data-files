@@ -447,6 +447,11 @@ def below_drawing(dr, b, comp, near, how):
         L.widen_canvas(dr, max(wide, bb[2] - bb[0] + 800, 0.25 * cw))
     else:
         L.grow_canvas(dr, bb[3] - bb[1] + 500)
+    reg, holes = L.region(mp, comp)  # the block must fit the other way too
+    if (bb[3] - bb[1]) + 500 > reg[3] - reg[1]:
+        L.grow_canvas(dr, (bb[3] - bb[1]) + 500 - (reg[3] - reg[1]))
+    if (bb[2] - bb[0]) + 500 > reg[2] - reg[0]:
+        L.widen_canvas(dr, (bb[2] - bb[0]) + 500 - (reg[2] - reg[0]))
     dr.occ = Occupancy(dr)
     reg, holes = L.region(mp, comp)
     f = free_spot(dr, b, reg, holes, near)

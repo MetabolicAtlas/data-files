@@ -352,6 +352,7 @@ def trim_band(mp, log, reach=25):
             total += dropped
     if total:
         log.append(("R7", "background band trimmed", "", "", f"{total} segments"))
+    return total
 
 
 def edit_map(path, model, out_path, review_path=None, scope=None, added_path=None, kegg=None, relayout=False,
@@ -580,12 +581,12 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
                     t.set("transform", f"matrix(1,0,0,1,{x:.1f},{size * 2:.1f})")
                 break
 
-    # R7 background band: drop the parts that ran along removed edges and along no remaining edge
-    trim_band(mp, log)
     # context reactions (D2 paths and D14 bridges of other subsystems) are drawn without the subsystem's band,
     # as the original drawings do
     context = {rid for rid, _ in dr.band_add if scope is not None and scope.subsystems and not scope.contains(rid)}
     layout.extend_band(mp, model, dr.band_add, skip=context)
+    # R7 background band: drop the parts that run along no remaining edge (edges removed, or emptied by D10)
+    trim_band(mp, log)
     if scope:
         rename_bands(mp, model, scope, map_names, log)
     if redrawn:  # D8: the band follows the new drawing
@@ -643,19 +644,66 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
         if scope.subsystems:
             title = next((g.find(SVG + "text") for g in mp.root.iter(SVG + "g") if g.get("class") == "subsystem"
                           and g.find(SVG + "text") is not None), None)
-        compact.compact(mp, log, title)
-        if cofactors != "off":
+        if cofactors != "off":  # before D13, which closes the space and centres the content as it ends up
             import declutter
             declutter.declutter(dr, cofactors)
+        compact.compact(mp, log, title)
+        if scope:
+            settle(dr, scope, comps, bridges, title, cofactors, log)
+        # R7 once more: white space closed after the last trim can take a band piece off its edge; then D13 again,
+        # as the band is part of the content it centres
+        if trim_band(mp, log):
+            compact.compact(mp, log, title)
 
     mp.root.set("data-modelversion", model.version)
     mp.write(out_path)
     if added_path:
         write_added(copy.deepcopy(mp.root), dr.placed, added_path)
 
+    # D16 rounds repeat some notes: one per change, and one review note per item
+    seen, rows = set(), []
+    for row in log:
+        key = tuple(row[:3]) if row[0] == "review" else tuple(row)
+        if key not in seen:
+            seen.add(key)
+            rows.append(tuple(row))
+    log[:] = rows
     if review_path:
         write_review(review_root, removed, marks, log, review_path)
     return log
+
+
+def settle(dr, scope, comps, bridges, title, cofactors, log, rounds=3):
+    """Repeat the steps that depend on where things are drawn (D5 metabolites of drawn reactions, D10 links, D14
+    bridges, with the band, cofactor dots and white space after them) on the finished drawing until a round
+    changes nothing, so that the editor run again on its own maps finds nothing to do. Parts are not moved again
+    to be linked: a second run would not move them either (it places nothing)."""
+    import compact
+    import connect
+    import layout
+    mp = dr.mp
+    for _ in range(rounds):
+        before = etree.tostring(mp.root)
+        dr.space = layout.Space(mp)
+        dr.band_add, dr.gone, dr.pending = [], [], []
+        layout.complete_reactions(dr)
+        connect.connect(dr, movable=0)
+        if bridges != "off" and scope.subsystems:
+            import bridges as B
+            limit, _, steps = bridges.partition(":")
+            dr.bridge_groups, dr.bridge_via = [], {}
+            B.add_bridges(dr, scope, comps, None if limit == "all" else int(limit), int(steps or 1))
+            B.draw_bridges(dr)
+            B.check_bridges(dr)
+        if etree.tostring(mp.root) == before:
+            return
+        context = {rid for rid, _ in dr.band_add if scope.subsystems and not scope.contains(rid)}
+        layout.extend_band(mp, dr.model, dr.band_add, skip=context)
+        trim_band(mp, log)
+        if cofactors != "off":
+            import declutter
+            declutter.declutter(dr, cofactors)
+        compact.compact(mp, log, title)
 
 
 def rename_bands(mp, model, scope, map_names, log):

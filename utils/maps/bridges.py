@@ -142,10 +142,15 @@ def add_bridges(dr, scope, comps_on_map, limit, steps=1):
             if best is None:
                 L.draw_missing(dr, rid, comps_on_map)
             added += 1
-            subs = model.rxns[rid].get("subsystem")
-            subs = subs[0] if isinstance(subs, list) else subs
-            log.append(("D14", what, rid, how, f"{subs}: {model.rxns[rid].get('name', '') or ''}"))
+            if best is None:  # drawn now; one-step bridges are logged when they are drawn (draw_bridges)
+                log.append(("D14", what, rid, how, subsystem_and_name(model, rid)))
     return added
+
+
+def subsystem_and_name(model, rid):
+    subs = model.rxns[rid].get("subsystem")
+    subs = subs[0] if isinstance(subs, list) else subs
+    return f"{subs}: {model.rxns[rid].get('name', '') or ''}"
 
 
 MOVE_MAX = 25  # reactions: the largest part moved to join a bridge
@@ -484,8 +489,7 @@ def draw_bridges(dr, near=1500):
     for rid, via in sorted(getattr(dr, "bridge_via", {}).items()):
         find, members = part_index(dr)
         pair = end_nodes(dr, via, find)
-        if pair is None:
-            log.append(("D14", "bridge dropped: the parts are joined already", rid, "", ""))
+        if pair is None:  # the parts are joined already
             dr.context.discard(rid)
             continue
         d, (ma, na, pa), (mb, nb, pb) = pair
@@ -522,13 +526,13 @@ def draw_bridges(dr, near=1500):
                 reason = "no free place to move either part, and too far apart"
             else:
                 reason = ", ".join(f"{k} ({v})" for k, v in why.most_common()) or "no free place to move either part"
-            log.append(("D14", "bridge dropped: no room to draw it", rid,
+            log.append(("review", "bridge left out: no room to draw it", rid,
                         f"{d:.0f} px between parts of {sizes[0]} and {sizes[1]} reactions; {reason}; "
                         f"{moves} place(s) tried for a part", ", ".join(model.name(x) for x in via)))
             dr.context.discard(rid)
             continue
-        log.append(("D14", "context reaction drawn", rid, "between " + model.name(ma) + " and " + model.name(mb),
-                    model.rxns[rid].get("name", "") or ""))
+        log.append(("D14", "bridge drawn (context reaction)", rid, "between " + model.name(ma) + " and " + model.name(mb),
+                    subsystem_and_name(model, rid)))
 
 
 def check_bridges(dr):

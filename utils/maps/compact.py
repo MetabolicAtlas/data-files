@@ -362,25 +362,39 @@ def compact(mp, log, title=None):
 
     def rect_f(g, b):
         return (shift(b[0], 0), shift(b[1], 1), shift(b[2], 0), shift(b[3], 1))
-    apply(mp, f, rect_f, skip_texts=(title,) if title is not None else ())
     w = shift(cuts[0][1], 0) + MARGIN + 100
     h = shift(cuts[1][1], 1) + MARGIN + 150  # room for the licence badge
-    if title is not None:
-        p = text_pos(title)
-        if p:
-            need = min(cw, (tb[2] - tb[0]) + 2 * MARGIN)  # the old canvas held the title
-            if need > w:  # centre the content under the title
-                dx = (need - w) / 2
-                apply(mp, lambda q: (q[0] + dx, q[1]), lambda g, b: (b[0] + dx, b[1], b[2] + dx, b[3]),
-                      skip_texts=(title,))
-                w = need
-            half = (tb[2] - tb[0] - 20) / 2
-            x = w / 2 if title.get("text-anchor") == "middle" or (title.getparent() is not None and
-                                                                  title.getparent().get("text-anchor") == "middle") \
-                else w / 2 - half
-            set_text_pos(title, (x, shift(p[1], 1)))
+    p = text_pos(title) if title is not None else None
+    dx = 0.0
+    if p:
+        need = min(cw, (tb[2] - tb[0]) + 2 * MARGIN)  # the old canvas held the title
+        left, right = shift(min(b[0] for b in items), 0), shift(cuts[0][1], 0)
+        if need > (right - left) + 2 * MARGIN + 100:
+            # content narrower than the title: centred under it, wherever its left edge was before (as if its margin
+            # were MARGIN; the licence badge side has 100 more)
+            dx = (need - (right - left) - 100) / 2 - left
+            w = need
+        else:
+            w = max(w, need)
+    # nothing to do when the content would move (cuts and centring together) and the canvas change by less than
+    # a pixel: rounding is not a change
+    if abs(w - cw) <= 1 and abs(h - ch) <= 1 and all(abs(f(q)[0] + dx - q[0]) <= 1 and abs(f(q)[1] - q[1]) <= 1
+                                                     for b in items for q in ((b[0], b[1]), (b[2], b[3]))):
+        return
+    apply(mp, f, rect_f, skip_texts=(title,) if title is not None else ())
+    if dx:
+        apply(mp, lambda q: (q[0] + dx, q[1]), lambda g, b: (b[0] + dx, b[1], b[2] + dx, b[3]),
+              skip_texts=(title,))
+    if p:
+        half = (tb[2] - tb[0] - 20) / 2
+        x = w / 2 if title.get("text-anchor") == "middle" or (title.getparent() is not None and
+                                                              title.getparent().get("text-anchor") == "middle") \
+            else w / 2 - half
+        set_text_pos(title, (x, shift(p[1], 1)))
     nw, nh = w, h
-    if (nw, nh) != (cw, ch) or any(cuts[a][0] for a in (0, 1)):
+    if abs(dx) > 1 and not any(cuts[a][0] for a in (0, 1)) and abs(nw - cw) <= 1 and abs(nh - ch) <= 1:
+        log.append(("D13", "content centred under the title again", "", f"{dx:.0f} px", ""))
+    elif abs(nw - cw) > 1 or abs(nh - ch) > 1 or any(cuts[a][0] for a in (0, 1)):  # not for rounding differences
         set_canvas(mp, nw, nh)
         # separator lines between compartments end where the content ends
         last_y = shift(cuts[1][1], 1)
