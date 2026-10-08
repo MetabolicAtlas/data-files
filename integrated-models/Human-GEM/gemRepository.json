@@ -295,5 +295,14 @@
     "PMID": "32209698",
     "count": {},
     "validation": {}
+  },
+  {
+    "id": "Human-GEM-2.1.1",
+    "externalParentId": [],
+    "releaseDate": "2026-10-07",
+    "releaseLink": "https://github.com/SysBioChalmers/Human-GEM/releases/tag/v2.1.1",
+    "PMID": "32209698",
+    "count": {},
+    "validation": {}
   }
 ]

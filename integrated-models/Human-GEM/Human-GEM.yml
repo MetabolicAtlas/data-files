@@ -4,8 +4,8 @@
     full_name: "Generic genome-scale metabolic model of Homo sapiens"
     id: HumanGEM
     name: Generic genome-scale metabolic model of Homo sapiens
-    version: "2.1.0"
-    date: "2026-09-30"
+    version: "2.1.1"
+    date: "2026-10-07"
     authors: ""
     email: ""
     organization: ""
