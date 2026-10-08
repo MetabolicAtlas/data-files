@@ -1,18 +1,18 @@
 # Updating an integrated model
 
-This guide updates one integrated model (for example Human-GEM 1.19.0 to 2.0.0) in this repository, and checks the result before it is deployed. It is written so that a person or an automated agent can follow it step by step.
+This guide updates one integrated model (for example Human-GEM 1.19.0 to 2.0.0) in this repository, and checks the result before it is deployed. It is written so that a person or an automated agent can follow it step by step. This repository holds only data; the scripts are in [data-generation](https://github.com/MetabolicAtlas/data-generation) (`update/`, `maps/`, `check/`), and the workflows here run them from a checkout of it.
 
 Update one model at a time, straight to its latest release. Metabolic Atlas serves only one version of each model, and the maps are not versioned, so intermediate releases never reach the site and need not be integrated. Stepping through them is only useful to find in which release a problem appeared: run the script with `--version` for each one.
 
 The work has three parts:
 
-1. **Update and check the data files.** `utils/update_model.py` does this. It needs no Docker and runs anywhere with Python and Node.js, including a cluster node.
+1. **Update and check the data files.** `update/update_model.py` in data-generation does this. It needs no Docker and runs anywhere with Python and Node.js, including a cluster node.
 2. **Test a local deployment.** This needs Docker. Build the Metabolic Atlas stack with the new files, run its tests and look at the site.
 3. **Publish the maps** to the model's maps repository, after the update is merged. A workflow does this.
 
 ## What the script does
 
-`utils/update_model.py --model <Model> --version <x.y.z>` runs these steps and stops at the first one that needs a person:
+`python update/update_model.py --model <Model> --version <x.y.z>`, run in data-generation, runs these steps on the data-files checkout next to it (or the one given with `--data-files`) and stops at the first one that needs a person:
 
 | Step | What happens | Stops when |
 | --- | --- | --- |
@@ -22,28 +22,28 @@ The work has three parts:
 | 4. Tables | Checks that every row in the three TSV files has as many fields as the header | any row has the wrong number of fields |
 | 5. Index | Sets `version` and `date` of the model in `integrated-models/integratedModels.json` | the model is not in the index |
 | 6. Timeline | Writes the model's GitHub releases, up to this version, to `integrated-models/<Model>/gemRepository.json` | the release is not on GitHub |
-| 7. Maps | Fits the SVG maps in `svg/<Model>` to the new version with `utils/maps/mapedit.py` (see [Maps](#maps) below) | the maps are Git LFS pointers |
-| 8. Generate and check | Runs data-generation on the updated files, then `check/check_generated_data.py` from data-generation, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
+| 7. Maps | Fits the SVG maps in `svg/<Model>` to the new version with `maps/mapedit.py` (see [Maps](#maps) below) | the maps are Git LFS pointers |
+| 8. Generate and check | Runs data-generation on the updated files, then its `check/check_generated_data.py`, which compares every generated file with the model files and with the baseline | data-generation fails, or a hard check fails |
 
 Exit status: `0` all hard checks passed, `1` data-generation or a hard check failed, `2` a manual fix is needed first.
 
-The script edits only `integrated-models/<Model>/`, `integrated-models/integratedModels.json` and the maps in `svg/<Model>`. Everything it generates goes to a work folder outside the repository (default `../model-update-work`).
+The script edits only `integrated-models/<Model>/`, `integrated-models/integratedModels.json` and the maps in `svg/<Model>` of data-files. Everything it generates goes to a work folder outside both repositories (default `model-update-work` next to data-files).
 
 ### Maps
 
-The maps are edited in place, keeping their drawing: identifiers follow the model; reactions and metabolites that are gone are removed; metabolites swapped in a reaction are relabelled; gene boxes follow the gene rules; reactions of a map's subsystem (or compartment) that are not drawn are added next to their metabolites, in free space or below the drawing; parts that share a metabolite are connected; and the background band follows the edges. The rules are listed in `utils/maps/RULES.md`. The step writes to `<work>/<Model>-<version>-maps/`:
+The maps are edited in place, keeping their drawing: identifiers follow the model; reactions and metabolites that are gone are removed; metabolites swapped in a reaction are relabelled; gene boxes follow the gene rules; reactions of a map's subsystem (or compartment) that are not drawn are added next to their metabolites, in free space or below the drawing; parts that share a metabolite are connected; and the background band follows the edges. The rules are listed in [maps/RULES.md](https://github.com/MetabolicAtlas/data-generation/blob/main/maps/RULES.md) in data-generation. Run again on its own maps with the same model, the editor changes nothing, so an update shows only what the new release causes. The step writes to `<work>/<Model>-<version>-maps/`:
 
 - `maps_summary.md`: the number of changes per rule, and what is left for review (also in the pull request description);
 - `edited/changes.tsv`: every change, by map and rule;
 - `edited/*.review.svg`: copies of the maps with the changes highlighted (the workflow keeps them as the `map-review` artifact).
 
-Open a few review copies, the maps with the most changes first. Maps without compartment boxes (Yeast-GEM's) draw every compartment in one area, and their gene boxes show the gene name over its identifier; `--gene-label` sets this. With `--kegg-dir <cache>` (made by `utils/maps/kegg_fetch.py`), added reactions that a KEGG map of their subsystem shows keep KEGG's arrangement. `--skip-maps` leaves the maps unchanged. New maps (for a subsystem or compartment without one) are not made by this step; `utils/maps/newmap.py` makes a blank map to start from.
+Open a few review copies, the maps with the most changes first. Maps without compartment boxes (Yeast-GEM's) draw every compartment in one area, and their gene boxes show the gene name over its identifier; `--gene-label` sets this. With `--kegg-dir <cache>` (made by `maps/kegg_fetch.py`), added reactions that a KEGG map of their subsystem shows keep KEGG's arrangement. `--skip-maps` leaves the maps unchanged. New maps (for a subsystem or compartment without one) are not made by this step; `maps/newmap.py` makes a blank map to start from.
 
-Transport maps (Human-GEM's "Transport: ..." maps, one per membrane, and Yeast-GEM's "Transport [a, b]" maps, one per transport subsystem) are not edited but written again from the new model with `utils/maps/transport_map.py`, together with their rows in `subsystemSVG.tsv`: a membrane can gain or lose a map when its reactions change. To add transport maps to a model that has none, run `transport_map.py <yml> <model folder> <a subsystem map as template> svg/<Model> integrated-models/<Model>/subsystemSVG.tsv` once (with `--gene-label both` for maps without compartment boxes, as Yeast-GEM's).
+Transport maps (Human-GEM's "Transport: ..." maps, one per membrane, and Yeast-GEM's "Transport [a, b]" maps, one per transport subsystem) are not edited but written again from the new model with `maps/transport_map.py`, together with their rows in `subsystemSVG.tsv`: a membrane can gain or lose a map when its reactions change. To add transport maps to a model that has none, run `python maps/transport_map.py <yml> <model folder> <a subsystem map as template> ../data-files/svg/<Model> ../data-files/integrated-models/<Model>/subsystemSVG.tsv` in data-generation once (with `--gene-label both` for maps without compartment boxes, as Yeast-GEM's).
 
 ## Automated updates
 
-The workflow [`.github/workflows/update-model.yml`](.github/workflows/update-model.yml) runs part 1 in GitHub Actions and opens a pull request:
+The workflow [`.github/workflows/update-model.yml`](.github/workflows/update-model.yml) runs part 1 in GitHub Actions, with the scripts of a data-generation checkout (`main` unless `data_generation_ref` says otherwise), and opens a pull request:
 
 - **Daily**, it updates Human-GEM to its latest release, if that is newer than the integrated version.
 - **Manually** (Actions tab, *Update integrated model*, *Run workflow*), it updates any model (`model`), to the latest or a given release (`version`). You can also set the data-generation branch or tag to use (`data_generation_ref`).
@@ -60,12 +60,12 @@ Part 2 (the local deployment test) stays manual. Merge the pull request when its
 
 ## Prerequisites
 
-Clone the three repositories next to each other; the script and the Metabolic Atlas helper scripts expect this layout:
+Clone the three repositories next to each other; the scripts and the Metabolic Atlas helper scripts expect this layout:
 
 ```
 work/
 ├── data-files/        this repository, with Git LFS files pulled
-├── data-generation/   MetabolicAtlas/data-generation
+├── data-generation/   MetabolicAtlas/data-generation: the generator, and the update, map and check scripts
 └── MetabolicAtlas/    MetabolicAtlas/MetabolicAtlas (optional for part 1; used to list stale test identifiers)
 ```
 
@@ -75,13 +75,13 @@ git clone https://github.com/MetabolicAtlas/data-generation
 git clone https://github.com/MetabolicAtlas/MetabolicAtlas
 (cd data-files && git lfs install && git lfs pull)
 (cd data-generation && yarn install --frozen-lockfile)
-pip install -r data-files/utils/requirements.txt
+pip install -r data-generation/requirements.txt
 ```
 
 You need:
 
 - Node.js 12 or later and yarn 1.22 or later. On a cluster with environment modules, for example `module load nodejs`.
-- Python 3.9 or later with the packages in `utils/requirements.txt`. The script uses `PyYAML` and `PyGithub`, and the map editor `lxml`.
+- Python 3.9 or later with the packages in data-generation's `requirements.txt`. The update script uses `PyYAML` and `PyGithub`, and the map editor `lxml`.
 - Git LFS. Without `git lfs pull` the SVG maps are pointer files; the script stops and says so.
 - A data-generation version that writes EC codes as `; `-separated strings and reads quoted TSV headers. The script warns if it does not.
 - Optionally `GH_TOKEN`, a GitHub token with read access. Without it GitHub allows 60 API calls an hour, which is enough for one model.
@@ -91,23 +91,23 @@ You need:
 ### 1. Find the version to update to
 
 ```bash
-cd data-files
-python utils/fetch_release_data.py -s
+cd data-generation
+python update/fetch_release_data.py -s
 ```
 
 This lists every integrated model with a newer release and the latest one, e.g. `Human-GEM can be updated: 1.19.0 => 2.1.0`. Update to that latest release.
 
-### 2. Make a branch
+### 2. Make a branch in data-files
 
 ```bash
-git switch main && git pull
-git switch -c chore/update-human-gem-2.0.0
+git -C ../data-files switch main && git -C ../data-files pull
+git -C ../data-files switch -c chore/update-human-gem-2.0.0
 ```
 
-### 3. Run the script
+### 3. Run the script, in data-generation
 
 ```bash
-python utils/update_model.py --model Human-GEM --version 2.0.0
+python update/update_model.py --model Human-GEM --version 2.0.0
 ```
 
 Use the repository name from `SysBioChalmers` for `--model`; it is also the folder name in `integrated-models`. The run takes about a minute; data-generation itself takes about 10 seconds.
@@ -119,8 +119,8 @@ On a cluster, run it as a batch job rather than on a login node. A Slurm example
 #SBATCH -n 1 -c 2
 #SBATCH -t 00:30:00
 module load nodejs
-cd /path/to/work/data-files
-python utils/update_model.py --model Human-GEM --version 2.0.0
+cd /path/to/work/data-generation
+python update/update_model.py --model Human-GEM --version 2.0.0
 ```
 
 The compute node needs internet access for steps 2 and 6.
@@ -144,7 +144,7 @@ data-generation reads the tables by position, so such a row would put values in 
 Then rerun with `--keep-files`, which skips the download and keeps your fixes:
 
 ```bash
-python utils/update_model.py --model Human-GEM --version 2.0.0 --keep-files
+python update/update_model.py --model Human-GEM --version 2.0.0 --keep-files
 ```
 
 Other stops and what to do:
@@ -185,11 +185,12 @@ All hard checks must pass. Then read the rest of the report; nothing in it block
 
 A warning about EC codes under `annotation/ec-code` means the release stores EC numbers where data-generation does not read them. The site would show no EC numbers, so data-generation must be updated first.
 
-### 7. Commit
+### 7. Commit, in data-files
 
-Commit in two steps, as earlier updates did:
+Commit in three steps, as earlier updates did:
 
 ```bash
+cd ../data-files
 git add integrated-models/<Model>/*.yml integrated-models/<Model>/*.tsv
 git commit -m "chore: update <Model> to <version>"      # list hand-corrected rows in the message body
 git add integrated-models/integratedModels.json integrated-models/<Model>/gemRepository.json
@@ -239,23 +240,34 @@ When the deployment works, push the branch and open a pull request with the repo
 
 ## Part 3: publish the maps
 
-The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups), Escher maps (JSON) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `utils/maps/publish_maps.py`, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
+The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups), Escher maps (JSON) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `maps/publish_maps.py` of data-generation, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
 
-The workflow needs the repository secret `MAPS_REPOS_TOKEN`: a token of an account with write access to both maps repositories (a fine-grained token with Contents and Pull requests read and write, on those two repositories). It can also be started by hand from the Actions tab, for one model.
+The workflow needs the repository secret `MAPS_REPOS_TOKEN`, because the maps repositories belong to another organisation and the workflow's own token cannot write to them. It can also be started by hand from the Actions tab, for one model (and a `data_generation_ref`).
 
-To publish by hand, with python-libsbml, lxml, cairosvg, Pillow and jsonschema installed:
+### Setting up `MAPS_REPOS_TOKEN`
+
+1. **Create a token.** As an account with write access to both maps repositories: GitHub, Settings, Developer settings, Personal access tokens, Fine-grained tokens, *Generate new token*:
+    - resource owner: **SysBioChalmers** (if it is not offered, an owner allows fine-grained tokens under the organisation's Settings, Third-party access, Personal access tokens; if the organisation requires approval, an owner approves the token there);
+    - repository access: only **Human-maps** and **Yeast-maps**;
+    - repository permissions: **Contents** read and write (to push the branch) and **Pull requests** read and write (to open the pull request); Metadata read-only is added by GitHub;
+    - an expiry date: note it, since the workflow fails once the token has expired.
+2. **Store it** in this repository: Settings, Secrets and variables, Actions, *New repository secret*, named `MAPS_REPOS_TOKEN`. Or with the GitHub CLI: `gh secret set MAPS_REPOS_TOKEN -R MetabolicAtlas/data-files`, pasting the token when asked.
+3. **Test it:** Actions, *Publish maps*, *Run workflow*, for Human-GEM. It should open a pull request in SysBioChalmers/Human-maps (or report that the maps repository is up to date). Workflows run only from the default branch, so this works once the workflow is on `main`.
+4. **Renew it** before it expires: make a new token the same way and replace the secret's value.
+
+To publish by hand, in the folder that holds data-files and data-generation, with python-libsbml, lxml, cairosvg, Pillow and jsonschema installed:
 
 ```bash
 git clone https://github.com/SysBioChalmers/Human-maps
-python data-files/utils/maps/publish_maps.py --model Human-GEM --repo Human-maps --summary summary.md
+python data-generation/maps/publish_maps.py --model Human-GEM --repo Human-maps --summary summary.md
 cd Human-maps && git switch -c maps-2.1.0 && git add -A && git commit -m "feat: maps for Human-GEM 2.1.0"
 ```
 
-With the libsbgn schema saved as `utils/maps/schema/SBGN.xsd` and Escher's map schema as `utils/maps/schema/escher_1-0-0.json` (from https://escher.github.io/escher/jsonschema/1-0-0, with `jsonschema` installed), every SBGN-ML file and Escher map is validated against them; every SBML file is checked with libsbml, and every Escher map with Escher's own consistency checks. The script stops if a file does not pass.
+With the libsbgn schema saved as `data-generation/maps/schema/SBGN.xsd` and Escher's map schema as `data-generation/maps/schema/escher_1-0-0.json` (from https://escher.github.io/escher/jsonschema/1-0-0, with `jsonschema` installed), every SBGN-ML file and Escher map is validated against them; every SBML file is checked with libsbml, and every Escher map with Escher's own consistency checks. The script stops if a file does not pass.
 
 ## Notes for automated runs
 
 - Run the whole of part 1 unattended; stop and hand over at exit status `2` if a row cannot be fixed from a later release, or if a fix would change a value.
 - Never edit model content beyond restoring fields to their columns. Corrections to the model belong in the model's own repository.
 - Commit, push and open pull requests only when asked to.
-- To start an update over, delete the work folder (`../model-update-work`) and discard the changes in `integrated-models/<Model>`.
+- To start an update over, delete the work folder (`model-update-work` next to data-files) and discard the changes in `integrated-models/<Model>`.

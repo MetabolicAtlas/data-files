@@ -1,7 +1,0 @@
-PyGithub
-pandas
-numpy
-packaging
-PyYAML
-matplotlib
-lxml

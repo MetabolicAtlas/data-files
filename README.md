@@ -25,11 +25,13 @@ For the rest of the files, or in case of uncertainty, send an email to contact[a
 
 ## How to update integrated models
 
-Follow [UPDATING_MODELS.md](UPDATING_MODELS.md). In short, for one model and one release:
+This repository holds data only. The scripts that update it are in [data-generation](https://github.com/MetabolicAtlas/data-generation) (`update/`, `maps/`, `overlay/`), and the workflows in `.github/workflows` run them from a checkout of it.
+
+Follow [UPDATING_MODELS.md](UPDATING_MODELS.md). In short, for one model and one release, in data-generation with this repository checked out next to it:
 
 ```
-python utils/fetch_release_data.py -s                                # which models can be updated
-python utils/update_model.py --model Human-GEM --version 2.0.0       # update and check the files
+python update/fetch_release_data.py -s                                # which models can be updated
+python update/update_model.py --model Human-GEM --version 2.0.0       # update and check the files
 ```
 
-`update_model.py` downloads the release files, prepares them for data-generation, updates `integratedModels.json` and the release timeline, runs data-generation and checks every generated file against the model. It stops with an explanation when the model files need a manual fix. A local deployment with Docker is then used to test the site.
+`update_model.py` downloads the release files, prepares them for data-generation, updates `integratedModels.json` and the release timeline, fits the maps, runs data-generation and checks every generated file against the model. It stops with an explanation when the model files need a manual fix. A local deployment with Docker is then used to test the site.

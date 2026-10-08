@@ -1,6 +1,7 @@
 # Prepares the update of an integrated model to a new release and opens a pull request.
 #
-# The workflow runs utils/update_model.py (see UPDATING_MODELS.md): it downloads the
+# The workflow runs update/update_model.py of MetabolicAtlas/data-generation (see UPDATING_MODELS.md;
+# this repository holds data only): it downloads the
 # release files, prepares them for data-generation, updates integratedModels.json and
 # the release timeline, runs data-generation and checks the generated data. The result
 # is pushed to a branch and a pull request is opened, with the check summary and the
@@ -81,6 +82,13 @@ jobs:
       - name: Install Python packages
         run: pip install pyyaml PyGithub packaging lxml
 
+      - name: Check out data-generation (the generator and the update scripts)
+        uses: actions/checkout@v4
+        with:
+          repository: MetabolicAtlas/data-generation
+          ref: ${{ env.DATA_GENERATION_REF }}
+          path: data-generation
+
       - name: Decide the version and branch
         id: target
         working-directory: data-files
@@ -90,7 +98,7 @@ jobs:
             version="${CONTINUE_BRANCH##*-}"
           fi
           if [ -z "$version" ]; then
-            version=$(python utils/update_model.py --model "$MODEL" --latest-version)
+            version=$(python ../data-generation/update/update_model.py --data-files . --model "$MODEL" --latest-version)
           fi
           if [ -z "$version" ]; then
             echo "$MODEL is up to date."
@@ -124,14 +132,6 @@ jobs:
         working-directory: data-files
         run: git lfs pull --include "svg/$MODEL/*"
 
-      - name: Check out data-generation
-        if: steps.target.outputs.version != ''
-        uses: actions/checkout@v4
-        with:
-          repository: MetabolicAtlas/data-generation
-          ref: ${{ env.DATA_GENERATION_REF }}
-          path: data-generation
-
       - name: Check out the MetabolicAtlas tests (to list identifiers they use)
         if: steps.target.outputs.version != ''
         uses: actions/checkout@v4
@@ -161,13 +161,13 @@ jobs:
         env:
           VERSION: ${{ steps.target.outputs.version }}
         run: |
-          args=(--model "$MODEL" --version "$VERSION" --baseline-data-files ../baseline
-                --data-generation ../data-generation --work-dir ../work)
+          args=(--data-files . --model "$MODEL" --version "$VERSION" --baseline-data-files ../baseline
+                --work-dir ../work)
           if [ -n "$CONTINUE_BRANCH" ]; then
             args+=(--keep-files)
           fi
           set +e
-          python utils/update_model.py "${args[@]}" 2>&1 | tee ../update.log
+          python ../data-generation/update/update_model.py "${args[@]}" 2>&1 | tee ../update.log
           status=${PIPESTATUS[0]}
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
@@ -187,7 +187,7 @@ jobs:
           git add "integrated-models/$MODEL"/*.yml "integrated-models/$MODEL"/*.tsv
           if ! git diff --cached --quiet; then
             git commit -m "chore: update $MODEL to $VERSION" \
-              -m "Release files prepared by utils/update_model.py (exit status $STATUS)."
+              -m "Release files prepared by update/update_model.py of MetabolicAtlas/data-generation ($DATA_GENERATION_REF; exit status $STATUS)."
           fi
           git add integrated-models/integratedModels.json "integrated-models/$MODEL/gemRepository.json"
           if ! git diff --cached --quiet; then
@@ -196,7 +196,7 @@ jobs:
           git add "svg/$MODEL"
           if ! git diff --cached --quiet; then
             git commit -m "feat: fit the $MODEL maps to $VERSION" \
-              -m "Maps edited by utils/maps/mapedit.py (rules in utils/maps/RULES.md)."
+              -m "Maps edited by maps/mapedit.py of MetabolicAtlas/data-generation (rules in maps/RULES.md there)."
           fi
           git push origin "$BRANCH"
 
@@ -208,7 +208,7 @@ jobs:
           STATUS: ${{ steps.update.outputs.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python data-files/utils/update_pr_body.py --model "$MODEL" --version "$VERSION" --status "$STATUS" \
+          python data-generation/update/update_pr_body.py --model "$MODEL" --version "$VERSION" --status "$STATUS" \
             --log update.log --report "work/$MODEL-$VERSION/check_report.md" \
             --maps-summary "work/$MODEL-$VERSION-maps/maps_summary.md" --branch "$BRANCH" --base "$BASE" \
             --data-generation-ref "$DATA_GENERATION_REF" --run-url "$RUN_URL" > body.md
