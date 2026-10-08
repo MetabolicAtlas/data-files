@@ -156,6 +156,7 @@ Other stops and what to do:
 | `metaData date ... is not YYYY-MM-DD` | Rerun with `--date YYYY-MM-DD`, using the release date |
 | `node is not on PATH`, `run 'yarn install'` | Install or load Node.js; run `yarn install --frozen-lockfile` in data-generation |
 | `the SVG maps are Git LFS pointers` | Run `git lfs pull` in data-files |
+| `X.tsv is missing in model/ at <tag>, but integrated-models/<Model>/X.tsv has content` | The release has no annotation tables, but data-files has some (Yeast-GEM 9.1.1 uses those of yeast-GEM's `develop` branch). Empty the three files and rerun without `--keep-files`; the update then has no cross-references. To keep them, copy afterwards the tables of a `develop` commit whose ids match the release's, and rerun with `--keep-files` |
 
 ### 5. If the script ends with status 1: read the failed checks
 
