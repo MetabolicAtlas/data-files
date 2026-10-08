@@ -355,9 +355,13 @@ def trim_band(mp, log, reach=25):
 
 
 def edit_map(path, model, out_path, review_path=None, scope=None, added_path=None, kegg=None, relayout=False,
-             hubs=None, bridges="off", one_area=False, map_names=frozenset()):
+             hubs=None, bridges="off", one_area=False, map_names=frozenset(), cofactors="added"):
     mp = Map(path)
     log = []
+    if mp.root.get("data-transport"):  # written whole from the model by transport_map.py
+        import shutil
+        shutil.copy(path, out_path)
+        return []
     marks = collections.defaultdict(set)  # element key -> highlight kind, for the review copy
     rmap = mp.reactions()
     import layout
@@ -640,6 +644,9 @@ def edit_map(path, model, out_path, review_path=None, scope=None, added_path=Non
             title = next((g.find(SVG + "text") for g in mp.root.iter(SVG + "g") if g.get("class") == "subsystem"
                           and g.find(SVG + "text") is not None), None)
         compact.compact(mp, log, title)
+        if cofactors != "off":
+            import declutter
+            declutter.declutter(dr, cofactors)
 
     mp.root.set("data-modelversion", model.version)
     mp.write(out_path)
@@ -817,6 +824,9 @@ def main():
                     help="D14: add one-step bridges of other subsystems between unconnected parts of subsystem maps, "
                          "through metabolites in at most N reactions (a number), 'all' (no limit; default) or 'off'; "
                          "append ':2' to also allow two-step bridges (e.g. 30:2)")
+    ap.add_argument("--cofactors", choices=["added", "all", "off"], default="added",
+                    help="D15: move cofactor dots that overlap other elements to a free place around their reaction: "
+                         "those of reactions placed in this run (default), all, or none")
     ap.add_argument("--hubs", choices=["spread", "mid", "scale"], default="mid",
                     help="crowded KEGG modules: move only the close compounds apart, or scale the module up")
     ap.add_argument("--kegg-relayout", nargs="*", default=[],
@@ -884,7 +894,7 @@ def main():
             log = edit_map(p, model, os.path.join(a.out, name),
                            os.path.join(a.out, name.replace(".svg", ".review.svg")) if a.review else None,
                            scope, os.path.join(a.out, name.replace(".svg", ".added.svg")) if a.review else None,
-                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area, map_names)
+                           kegg, name in a.kegg_relayout, a.hubs, a.bridges, a.one_area, map_names, a.cofactors)
         except Exception as err:  # keep the map unchanged and go on with the others
             import shutil
             import traceback

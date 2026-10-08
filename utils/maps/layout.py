@@ -252,8 +252,8 @@ class Space:
             b = node_box(mp, n)
             if b:
                 self.add(b)
+        self.keep = list(mp.root.iter(SVG + "text"))  # an element's id() stays the same while it is referred to
         in_nodes = {id(t) for n in mp.layer["nodes"] for t in n.iter(SVG + "text")}
-        self.keep = list(mp.root.iter(SVG + "text"))  # ids above stay valid while these live
         for t in self.keep:  # headings, titles and any other free text
             if id(t) not in in_nodes:
                 b = text_box(t)
@@ -562,8 +562,9 @@ MAX_METABOLITES = 12  # a reaction with more metabolites is a lumped model react
 
 def artefact(model, rid):
     """R11: why a reaction is a model artefact rather than a biochemical step (or None): a reaction of an
-    artificial subsystem (biomass, exchange), a pool reaction that forms a pool, or a lumped reaction with
-    more than MAX_METABOLITES metabolites."""
+    artificial subsystem (biomass, exchange), a reaction with metabolites on one side only (an exchange, demand
+    or sink, whatever its subsystem: Yeast-GEM files them under "Exchange reaction"), a pool reaction that forms
+    a pool, or a lumped reaction with more than MAX_METABOLITES metabolites."""
     r = model.rxns.get(rid)
     if not r:
         return None
@@ -571,6 +572,9 @@ def artefact(model, rid):
     subs = set(subs if isinstance(subs, list) else [subs])
     if subs & ARTEFACT_SUBSYSTEMS:
         return "artificial subsystem"
+    coefs = r["stoich"].values()
+    if coefs and (all(c < 0 for c in coefs) or all(c > 0 for c in coefs)):
+        return "exchange (metabolites on one side only)"
     if "Pool reactions" in subs and "pool" in (r.get("name") or "").lower():
         return "pool reaction"
     if len(r["stoich"]) > MAX_METABOLITES:

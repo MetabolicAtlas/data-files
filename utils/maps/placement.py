@@ -124,13 +124,18 @@ def chain_block(model, chain, per_row=6):
         subs, prods = mains(model, rid)
         side = L.normal(heading)
         keys = {}
+        # new substrates go beside the previous reaction's products, not on them
+        taken = [b.nodes[key][1] for key in prev.values()]
         k = 0
         for m in subs:
             if m in prev:
                 keys[m] = prev[m]
             else:
+                while any(L.length(L.sub(L.add(pos, side, 90.0 * k), q)) < 45 for q in taken):
+                    k += 1
                 keys[m] = (rid, m)
                 b.nodes[keys[m]] = (m, L.add(pos, side, 90.0 * k))
+                taken.append(b.nodes[keys[m]][1])
                 k += 1
         end = L.add(pos, heading, 2 * STEP)
         for k2, m in enumerate(prods):
@@ -275,9 +280,19 @@ def node_index(dr):
     return index
 
 
+def clash(b, o):
+    """Pairs of the block's own nodes whose labels overlap in orientation o: metabolites of one reaction sit 90 px
+    apart, one above the other, and a block turned by 90 degrees puts them side by side."""
+    pts = [tr(o, p) for _, p in b.nodes.values()]
+    return sum(1 for i, p in enumerate(pts) for q in pts[i + 1:]
+               if abs(p[0] - q[0]) < 2 * NODE_HALF[0] and abs(p[1] - q[1]) < 2 * NODE_HALF[1])
+
+
 def dock(dr, b, reg, holes, index):
-    """Best docking of b onto drawn nodes: (orientation, translation, {key: node}) or None."""
+    """Best docking of b onto drawn nodes: (orientation, translation, {key: node}) or None. The most nodes landing on
+    their own drawn node first; among those, the orientation in which the fewest of the block's labels overlap."""
     best = None
+    clashes = [clash(b, o) for o in ORIENT]
     for key, (m, p) in b.nodes.items():
         for q, n in index.get(m, ()):
             if not in_region(q, reg, holes):
@@ -291,7 +306,7 @@ def dock(dr, b, reg, holes, index):
                         n2 = next((x for qx, x in index.get(m2, ()) if L.length(L.sub(qx, q2)) < 60), None)
                         if n2 is not None:
                             anchors[k2] = n2
-                cost = oi - 20 * len(anchors)
+                cost = (-len(anchors), clashes[oi], oi)
                 if best is not None and cost >= best[0]:
                     continue
                 if fits(dr, footprint(dr, b, o, t, set(anchors)), reg, holes):
@@ -307,13 +322,14 @@ def free_spot(dr, b, reg, holes, near, step=None):
     for o in (ORIENT[0], ORIENT[4]):
         bb = b.bbox(o)
         w, h = bb[2] - bb[0], bb[3] - bb[1]
+        penalty = (0 if o is ORIENT[0] else 50) + 300 * min(clash(b, o), 3)  # px: overlapping labels count as further away
         y = reg[1] + 200
         while y + h < reg[3] - 200:
             x = reg[0] + 200
             while x + w < reg[2] - 200:
                 c = (x + w / 2, y + h / 2)
                 d = math.hypot(c[0] - near[0], c[1] - near[1]) if near else y * 10 + x
-                cands.append((d + (0 if o is ORIENT[0] else 50), o, (x - bb[0], y - bb[1])))
+                cands.append((d + penalty, o, (x - bb[0], y - bb[1])))
                 x += step
             y += step
     cands.sort(key=lambda c: c[0])
@@ -406,18 +422,9 @@ def place_pending(dr, hubs="mid"):
             if boxed:
                 leftover.append(b)
                 continue
-            bb = b.bbox()
-            cw, ch = L.canvas(mp)[2:]
-            wide = (bb[2] - bb[0]) + 800 - (reg[2] - reg[0])
-            if wide > 0 or ch > 0.7 * cw:  # keep the map from becoming a tall strip
-                L.widen_canvas(dr, max(wide, bb[2] - bb[0] + 800, 0.25 * cw))
-            else:
-                L.grow_canvas(dr, bb[3] - bb[1] + 500)
-            dr.occ = Occupancy(dr)
-            reg, holes = L.region(mp, comp)
-            f = free_spot(dr, b, reg, holes, c)
-            if f:
-                drawn(draw(dr, b, f[0], f[1], {}, "below the drawing" + (f" ({b.label})" if b.kind == "kegg" else "")))
+            created = below_drawing(dr, b, comp, c, "below the drawing" + (f" ({b.label})" if b.kind == "kegg" else ""))
+            if created is not None:
+                drawn(created)
             else:
                 log.append(("review", "added reaction could not be placed", b.steps[0][0], comp, ""))
         dr.occ = None
@@ -425,6 +432,25 @@ def place_pending(dr, hubs="mid"):
             import compact
             if not (boxed and compact.grow_box(dr, comp, leftover, draw, ORIENT[0])):
                 new_box(dr, comp, leftover)
+
+
+def below_drawing(dr, b, comp, near, how):
+    """Step 3 for a block of an unboxed compartment: the canvas grows (wider, or taller while the map stays
+    landscape) and the block goes into the new space, as close to `near` as there is room. The created nodes,
+    or None if it still finds no place."""
+    mp = dr.mp
+    reg, holes = L.region(mp, comp)
+    bb = b.bbox()
+    cw, ch = L.canvas(mp)[2:]
+    wide = (bb[2] - bb[0]) + 800 - (reg[2] - reg[0])
+    if wide > 0 or ch > 0.7 * cw:  # keep the map from becoming a tall strip
+        L.widen_canvas(dr, max(wide, bb[2] - bb[0] + 800, 0.25 * cw))
+    else:
+        L.grow_canvas(dr, bb[3] - bb[1] + 500)
+    dr.occ = Occupancy(dr)
+    reg, holes = L.region(mp, comp)
+    f = free_spot(dr, b, reg, holes, near)
+    return draw(dr, b, f[0], f[1], {}, how) if f else None
 
 
 PAD = 180  # px around a block in a new box (cofactors, genes)

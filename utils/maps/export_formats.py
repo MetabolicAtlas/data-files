@@ -18,6 +18,7 @@ too; every SBML file is checked with libsbml, and every Escher map with Escher's
 import argparse
 import collections
 import io
+import math
 import os
 import re
 import shutil
@@ -48,9 +49,10 @@ class MapData:
         self.mp, self.model = mp, model
         self.name = os.path.basename(path)[:-4]
         self.width, self.height = float(mp.root.get("width")), float(mp.root.get("height"))
-        band = next((g for g in mp.root.iter(L.SVG + "g") if g.get("class") == "subsystem"), None)
-        title = band.find(L.SVG + "text") if band is not None else None
-        self.title = ("".join(title.itertext()).strip() if title is not None else "") or self.name.replace("_", " ")
+        # a subsystem map's one band carries the map title; the bands of a compartment map carry subsystem names
+        bands = [g for g in mp.root.iter(L.SVG + "g") if g.get("class") == "subsystem"]
+        title = " ".join(text for text, *_ in text_blocks(bands[0])) if len(bands) == 1 else ""
+        self.title = title or self.name[:1].upper() + self.name[1:].replace("_", " ")
         self.boxes = [(g.get("id"), b) for g in mp.root.iter(L.SVG + "g") if g.get("class") == "compartment"
                       for b in [L.compartment_boxes(mp).get(g.get("id"))] if b]
         self.rpos = {r: L.translate(g) for r, g in mp.reactions().items() if L.translate(g) and r in model.rxns}
@@ -60,7 +62,7 @@ class MapData:
             if p and len(cls) > 1:
                 main = n.find(L.SVG + "ellipse") is not None
                 box = (p[0] - 30, p[1] - 20, 60, 40) if main else (p[0] - 7, p[1] - 7, 14, 14)
-                self.mets.append({"met": cls[1], "pos": p, "box": box, "main": main,
+                self.mets.append({"met": cls[1], "pos": p, "box": box, "main": main, "label": svg_label(n),
                                   "rids": [c for c in cls[2:] if c in self.rpos]})
         for n in mp.nodes("enz"):
             cls, p = mp.classes(n), L.translate(n)
@@ -95,6 +97,56 @@ class MapData:
 
     def compartment_of_box(self, p):
         return next((name for name, b in self.boxes if b[0] <= p[0] <= b[2] and b[1] <= p[1] <= b[3]), None)
+
+
+def font_size(t):
+    v = t.get("font-size") or (t.getparent().get("font-size") if t.getparent() is not None else None) or "18"
+    return float(re.sub(r"[^0-9.]", "", v) or 18)
+
+
+def svg_label(n):
+    """Where a metabolite node draws its label, relative to the node: (anchor, x, baseline, font size), with
+    anchor start, end or middle and x the left end, the right end or the centre of its lines."""
+    lines = []
+    for t in n.iter(L.SVG + "text"):
+        content = " ".join(x.strip() for x in t.itertext() if x.strip())
+        if not content:
+            continue
+        size = font_size(t)
+        anchor = t.get("text-anchor") or t.getparent().get("text-anchor") or "start"
+        x, y = float(t.get("x") or 0), float(t.get("y") or 0)
+        w = L.label_width(content, size)
+        left = x - w / 2 if anchor == "middle" else x - w if anchor == "end" else x
+        lines.append((anchor, left, left + w, y, size))
+    if not lines:
+        return ("middle", 0.0, 6.0, 18.0)
+    anchors = {a for a, *_ in lines}
+    base, size = sum(x[3] for x in lines) / len(lines), lines[0][4]
+    if anchors == {"start"}:
+        return ("start", min(x[1] for x in lines), base, size)
+    if anchors == {"end"}:
+        return ("end", max(x[2] for x in lines), base, size)
+    return ("middle", (min(x[1] for x in lines) + max(x[2] for x in lines)) / 2, base, size)
+
+
+def text_blocks(group):
+    """The labels of a compartment or subsystem group: each text, or each group of text lines read as one, as
+    (text, centre x, mean baseline, font size)."""
+    out = []
+    for child in group:
+        texts = [child] if child.tag == L.SVG + "text" else list(child.iter(L.SVG + "text")) \
+            if child.tag == L.SVG + "g" else []
+        lines = []
+        for t in texts:
+            content = " ".join(x.strip() for x in t.itertext() if x.strip())
+            b = L.text_box(t)
+            if content and b:
+                size = font_size(t)
+                lines.append((content, (b[0] + b[2]) / 2, b[3] - 0.4 * size, size))
+        if lines:
+            out.append((" ".join(x[0] for x in lines), sum(x[1] for x in lines) / len(lines),
+                        sum(x[2] for x in lines) / len(lines), max(x[3] for x in lines)))
+    return out
 
 
 # ----------------------------------------------------------------------------- SBGN-ML
@@ -316,12 +368,132 @@ def validate_sbgn(path):
 
 ESCHER_SCHEMA = "https://escher.github.io/escher/jsonschema/1-0-0#"
 
+# Escher's own styles: labels are bold sans-serif drawn from their left end on their baseline, 20 px for
+# metabolites, 30 px for reactions (the gene rule, when shown, follows below in 18 px lines) and 50 px for text
+# labels; metabolite circles have a radius of 20 px (primary) or 10 px (secondary)
+NODE_SIZE, REACTION_SIZE, TEXT_SIZE = 20, 30, 50
+RADIUS = {True: 20, False: 10}
+# Helvetica Bold advance widths (1/1000 em) of the printable ASCII characters; any other character counts 600
+BOLD = dict(zip(map(chr, range(32, 127)), [
+    278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556,
+    556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722,
+    611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556, 333, 556,
+    611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611, 611, 611, 389, 556, 333, 611, 556, 778,
+    556, 556, 500, 389, 280, 389, 584]))
+REPEAT = 3500   # px between the repeated names of a large compartment
+LARGE = 2500    # px: a compartment box this wide or high gets its name at its corners too
+
+
+def text_width(s, size):
+    return size * sum(BOLD.get(ch, 600) for ch in s) / 1000
+
+
+def text_label_box(x, y, w, size):
+    """Box of a label drawn from (x, y), its left end on the baseline."""
+    return (x, y - 0.75 * size, x + w, y + 0.25 * size)
+
+
+class Taken:
+    """What an Escher map draws (nodes, segments, labels) as weighted boxes, to find free places for labels."""
+
+    def __init__(self, cell=100):
+        self.cell, self.grid = cell, collections.defaultdict(list)
+
+    def cells(self, b):
+        c = self.cell
+        return [(i, j) for i in range(int(b[0] // c), int(b[2] // c) + 1)
+                for j in range(int(b[1] // c), int(b[3] // c) + 1)]
+
+    def add(self, b, weight):
+        item = (b, weight)
+        for key in self.cells(b):
+            self.grid[key].append(item)
+
+    def cost(self, b):
+        seen, total = set(), 0
+        for key in self.cells(b):
+            for item in self.grid.get(key, ()):
+                o, w = item
+                if id(item) not in seen and o[0] < b[2] and o[2] > b[0] and o[1] < b[3] and o[3] > b[1]:
+                    seen.add(id(item))
+                    total += w
+        return total
+
+
+def segment_points(a, b, b1, b2, step=15):
+    """Points along a segment as Escher draws it: a cubic Bezier through its control points, or a line."""
+    if b1 is None or b2 is None:
+        ctrl = [a, b]
+    else:
+        ctrl = [a, (b1["x"], b1["y"]), (b2["x"], b2["y"]), b]
+    k = max(2, int(L.poly_length(ctrl) / step))
+    out = []
+    for i in range(k + 1):
+        t = i / k
+        if len(ctrl) == 2:
+            out.append(L.add(a, L.sub(b, a), t))
+        else:
+            c = [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3]
+            out.append((sum(w * p[0] for w, p in zip(c, ctrl)), sum(w * p[1] for w, p in zip(c, ctrl))))
+    return out
+
+
+def best(taken, cands, w, size):
+    """The candidate (preference, x, y) whose label box overlaps least of what is drawn, then the preferred."""
+    return min(cands, key=lambda c: (taken.cost(text_label_box(c[1], c[2], w, size)), c[0]))
+
+
+def escher_text(text, cx, base, size):
+    """An SVG label block (centre x, mean baseline, font size) as an Escher text label at the same centre."""
+    return cx - text_width(text, TEXT_SIZE) / 2, base - 0.35 * size + 0.35 * TEXT_SIZE
+
+
+def compartment_spots(g, box, head, w):
+    """Places to repeat a compartment's name, with the directions they may slide to find room: the corners and
+    along the edges of a large box, or along a separator line on the heading's side."""
+    asc, desc, m = 0.75 * TEXT_SIZE, 0.25 * TEXT_SIZE, 70
+    out = []
+    if box:
+        x0, y0, x1, y1 = box
+        if max(x1 - x0, y1 - y0) < LARGE:
+            return out
+        left, right = x0 + m, max(x0 + m, x1 - m - w)
+        n = max(1, math.ceil((right - left) / REPEAT))
+        for k in range(n + 1):
+            x = left + (right - left) * k / n
+            out += [((x, y0 + m + asc), (1, 0), (0, 1)), ((x, y1 - m - desc), (1, 0), (0, -1))]
+        top, bottom = y0 + m + asc, y1 - m - desc
+        n = math.ceil((bottom - top) / REPEAT)
+        for k in range(1, n):
+            y = top + (bottom - top) * k / n
+            out += [((left, y), (0, 1), (1, 0)), ((right, y), (0, 1), (-1, 0))]
+        return out
+    lines = [sp for path in g.iter(L.SVG + "path") for sp in (L.subpaths(path.get("d") or "") or [])
+             if len(sp) >= 2 and abs(sp[0][0] - sp[-1][0]) < 5]
+    if not lines:
+        return out
+    xs = sorted(sp[0][0] for sp in lines)
+    hx = head[0] + w / 2
+    x = (xs[0] + xs[-1] - w) / 2 if xs[0] < hx < xs[-1] else xs[0] - 60 - w if hx < xs[0] else xs[-1] + 60
+    bottom = max(max(p[1] for p in sp) for sp in lines) - 200
+    y = head[1] + REPEAT
+    while y < bottom:
+        out.append(((x, y), (0, 1), (0, 0)))
+        y += REPEAT
+    return out
+
 
 def write_escher(d, path, model_name):
     """An Escher map (JSON, schema 1-0-0): metabolite nodes where the SVG draws them (main metabolites as
     primary nodes, cofactors as secondary ones), each reaction as a midmarker with two multimarkers along its
-    direction, the SVG's edge paths as Bezier segments (their bends as control points), and the title and
-    compartment headings as text labels. Escher has no boxes, bands or gene boxes; genes are in the gene rules."""
+    direction, the SVG's edge paths as Bezier segments (their bends as control points), and the title, band names
+    and compartment names as text labels. Escher has no boxes, bands or gene boxes, so a large compartment's name
+    is repeated at its corners and along its edges or separator line; genes are in the gene rules.
+
+    Labels are placed for names (Escher's "Descriptive names"). A cofactor's label stands where the SVG has it;
+    a main metabolite's label is centred like the SVG's, above or below the node (or beside it) where it
+    overlaps least of the drawing; a reaction's label starts where the SVG draws its gene boxes, else beside the
+    reaction, wherever its name overlaps least."""
     import json
     model = d.model
     ids = iter(range(1, 10 ** 9))
@@ -331,10 +503,10 @@ def write_escher(d, path, model_name):
         nid = str(next(ids))
         met_node[i] = nid
         px, py = x["pos"]
-        lx, ly = (px - 30, py - 28) if x["main"] else (px + 12, py + 5)
         nodes[nid] = {"node_type": "metabolite", "x": round(px, 1), "y": round(py, 1), "bigg_id": x["met"],
-                      "name": model.name(x["met"]), "label_x": round(lx, 1), "label_y": round(ly, 1),
+                      "name": model.name(x["met"]), "label_x": round(px, 1), "label_y": round(py, 1),
                       "node_is_primary": bool(x["main"])}
+    axes = {}
     for rid, rp in d.rpos.items():
         r = model.rxns[rid]
         st = r["stoich"]
@@ -364,19 +536,108 @@ def write_escher(d, path, model_name):
         reactions[str(next(ids))] = {
             "name": mapedit.text(r.get("name")) or rid, "bigg_id": rid,
             "reversibility": (r.get("lower_bound") or 0) < 0,
-            "label_x": round(rp[0] + 20, 1), "label_y": round(rp[1] - 20, 1),
+            "label_x": round(rp[0], 1), "label_y": round(rp[1], 1),
             "gene_reaction_rule": rule, "genes": genes,
             "metabolites": [{"bigg_id": m, "coefficient": c} for m, c in st.items()],
             "segments": segments}
-    for g in d.mp.root.iter(L.SVG + "g"):
-        if g.get("class") in ("compartment", "subsystem"):
-            for t in g.iter(L.SVG + "text"):
-                content = " ".join(x.strip() for x in t.itertext() if x.strip())
-                b = L.text_box(t)
-                if content and b:
-                    labels[str(next(ids))] = {"text": content, "x": round(b[0] + 10, 1), "y": round(b[3] - 10, 1)}
+        axes[rid] = u
+
+    # what is drawn: circles, segments, then each label as it is placed
+    taken = Taken()
+    for n in nodes.values():
+        rad = RADIUS[n["node_is_primary"]] if n["node_type"] == "metabolite" else 5
+        taken.add((n["x"] - rad, n["y"] - rad, n["x"] + rad, n["y"] + rad), 5)
+    for r in reactions.values():
+        for seg in r["segments"].values():
+            fa, fb = nodes[seg["from_node_id"]], nodes[seg["to_node_id"]]
+            for q in segment_points((fa["x"], fa["y"]), (fb["x"], fb["y"]), seg["b1"], seg["b2"]):
+                taken.add((q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4), 1)
+
+    def place(node, lx, ly):
+        node["label_x"], node["label_y"] = round(lx, 1), round(ly, 1)
+        taken.add(text_label_box(lx, ly, text_width(node["name"], NODE_SIZE), NODE_SIZE), 5)
+
+    for primary in (False, True):  # cofactors first: their labels stay where the SVG has them
+        for i, x in enumerate(d.mets):
+            if bool(x["main"]) != primary:
+                continue
+            node = nodes[met_node[i]]
+            (px, py), (anchor, ax, base, size) = x["pos"], x["label"]
+            w = text_width(node["name"], NODE_SIZE)
+            if not primary:
+                lx = px + ax if anchor == "start" else px + ax - w if anchor == "end" else px + ax - w / 2
+                place(node, lx, py + base * NODE_SIZE / size)
+                continue
+            cx = px + ax if anchor == "middle" else px
+            rad = RADIUS[True]
+            cands = [(0, cx - w / 2, py - rad - 8), (1, cx - w / 2, py + rad + 6 + 0.75 * NODE_SIZE),
+                     (2, px + rad + 7, py + 7), (3, px - rad - 7 - w, py + 7)]
+            _, lx, ly = best(taken, cands, w, NODE_SIZE)
+            place(node, lx, ly)
+
+    gene_boxes = collections.defaultdict(list)
+    for g in d.genes:
+        for rid in g["rids"]:
+            gene_boxes[rid].append(g["box"])
+    for r in reactions.values():  # from their left end, so that an id and a long name both grow away
+        rid = r["bigg_id"]
+        rp, u = d.rpos[rid], axes[rid]
+        w_id = text_width(rid, REACTION_SIZE)
+        w = max(w_id, text_width(r["name"], REACTION_SIZE))
+        cands = []
+        gb = gene_boxes.get(rid)
+        if gb:  # where the SVG draws the gene boxes, which Escher does not show
+            x0, y0 = min(b[0] for b in gb), min(b[1] for b in gb)
+            x1, y1 = max(b[0] + b[2] for b in gb), max(b[1] + b[3] for b in gb)
+            if L.length(L.sub(((x0 + x1) / 2, (y0 + y1) / 2), rp)) < 400:
+                cands.append((0, x0, y0 + 0.75 * REACTION_SIZE))
+        n = L.normal(u)
+        sides = [d.mets[i]["pos"] for i, _ in d.edges[rid] if not d.mets[i]["main"]]
+        lean = sum((p[0] - rp[0]) * n[0] + (p[1] - rp[1]) * n[1] for p in sides)
+        away = (-n[0], -n[1]) if lean > 0 else n  # the side without cofactors
+        for j, gap in enumerate((0, 25, 55, 90)):
+            spots = {"above": (rp[0] - w_id / 2, rp[1] - 38 - gap),
+                     "below": (rp[0] - w_id / 2, rp[1] + 38 + 0.75 * REACTION_SIZE + gap),
+                     "right": (rp[0] + 38 + gap, rp[1] + 0.25 * REACTION_SIZE),
+                     "left": (rp[0] - 38 - gap - w_id, rp[1] + 0.25 * REACTION_SIZE)}
+            facing = {"above": (0, -1), "below": (0, 1), "right": (1, 0), "left": (-1, 0)}
+            for side, (x, y) in spots.items():
+                f = facing[side]
+                pref = 1 + j * 0.3 + (0 if f[0] * away[0] + f[1] * away[1] > 0.5 else 0.5) + (0.3 if side == "left" else 0)
+                cands.append((pref, x, y))
+        _, lx, ly = best(taken, cands, w, REACTION_SIZE)
+        r["label_x"], r["label_y"] = round(lx, 1), round(ly, 1)
+        taken.add(text_label_box(lx, ly, w, REACTION_SIZE), 5)
+
+    def text_label(text, x, y):
+        labels[str(next(ids))] = {"text": text, "x": round(x, 1), "y": round(y, 1)}
+        taken.add(text_label_box(x, y, text_width(text, TEXT_SIZE), TEXT_SIZE), 5)
+
+    groups = [g for g in d.mp.root.iter(L.SVG + "g") if g.get("class") in ("compartment", "subsystem")]
+    heads = []
+    for g in groups:
+        for k, (text, cx, base, size) in enumerate(text_blocks(g)):
+            x, y = escher_text(text, cx, base, size)
+            text_label(text, x, y)
+            if k == 0 and g.get("class") == "compartment":
+                heads.append((g, text, (x, y)))
+    boxes = L.compartment_boxes(d.mp)
+    for g, text, head in heads:  # the name again where a large compartment reaches beyond its heading
+        w = text_width(text, TEXT_SIZE)
+        placed = [head]
+        for (x, y), along, inward in compartment_spots(g, boxes.get(g.get("id")), head, w):
+            if any(L.length(L.sub((x, y), p)) < REPEAT * 0.4 for p in placed):
+                continue
+            for s, t in [(s, t) for t in (0, 150, 300) for s in (0, 150, -150, 300, -300, 600, -600, 900, -900)]:
+                q = (x + along[0] * s + inward[0] * t, y + along[1] * s + inward[1] * t)
+                if taken.cost(text_label_box(q[0], q[1], w, TEXT_SIZE)) == 0:
+                    text_label(text, *q)
+                    placed.append(q)
+                    break
+
     header = {"map_name": f"{d.title} ({model_name})", "map_id": d.name,
-              "map_description": f"{d.title}: a Metabolic Atlas map of {model_name}, converted from its SVG map",
+              "map_description": f"{d.title}: a Metabolic Atlas map of {model_name}, converted from its SVG map. "
+                                 "Its labels are placed for descriptive names.",
               "homepage": "https://escher.github.io", "schema": ESCHER_SCHEMA}
     body = {"reactions": reactions, "nodes": nodes, "text_labels": labels,
             "canvas": {"x": 0, "y": 0, "width": d.width, "height": d.height}}

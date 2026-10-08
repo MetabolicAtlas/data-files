@@ -268,13 +268,29 @@ def update_maps(args, model_dir, new_yaml, old_yaml, work_maps, summary_path):
         if os.path.exists(new) and open(new, "rb").read() != open(m, "rb").read():
             shutil.copyfile(new, m)
             edited += 1
+    # transport maps are written whole from the new model, with their rows in subsystemSVG.tsv
+    transport = [m for m in maps if b"data-transport=" in open(m, "rb").read(3000)]
+    transport_note = ""
+    if transport:
+        listed = [line.split("\t")[2].strip() for line in open(os.path.join(model_dir, "subsystemSVG.tsv"), encoding="utf-8")
+                  if line.count("\t") >= 2 and not line.startswith(("#", "@"))]
+        template = next(os.path.join(svg_dir, f) for f in listed
+                        if os.path.join(svg_dir, f) in maps and os.path.join(svg_dir, f) not in transport)
+        result = subprocess.run([sys.executable, os.path.join(HERE, "maps", "transport_map.py"), new_yaml, tables,
+                                 template, svg_dir, os.path.join(model_dir, "subsystemSVG.tsv")],
+                                capture_output=True, text=True)
+        if result.returncode:
+            transport_note = "; transport maps left unchanged (transport_map.py failed)"
+            log(f"7. Maps: transport_map.py failed\n{result.stderr[-3000:]}")
+        else:
+            transport_note = f"; {result.stdout.count('.svg:')} transport maps written again"
     rows = [line.rstrip("\n").split("\t") for line in open(os.path.join(out, "changes.tsv"), encoding="utf-8")][1:]
     changes = collections.Counter((r[1], r[2]) for r in rows
                                   if len(r) > 2 and r[1] not in ("review", "error") and r[2] != "connection passes")
     review = collections.Counter(r[2] for r in rows if len(r) > 2 and r[1] == "review")
     errors = [r[0] for r in rows if len(r) > 1 and r[1] == "error"]
-    lines = [f"{edited} of {len(maps)} maps changed. The rules are listed in utils/maps/RULES.md; the workflow "
-             "artifact holds the full change list and copies of the maps with the changes highlighted.", "",
+    lines = [f"{edited} of {len(maps)} maps changed{transport_note}. The rules are listed in utils/maps/RULES.md; "
+             "the workflow artifact holds the full change list and copies of the maps with the changes highlighted.", "",
              "| rule | change | count |", "|---|---|---|"]
     lines += [f"| {k[0]} | {k[1]} | {n} |" for k, n in sorted(changes.items(), key=lambda x: (x[0][0][0], int(x[0][0][1:]) if x[0][0][1:].isdigit() else 0))]
     if review:
@@ -285,7 +301,8 @@ def update_maps(args, model_dir, new_yaml, old_yaml, work_maps, summary_path):
     with open(summary_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     log(f"7. Maps: {edited} of {len(maps)} maps changed"
-        + (f"; {len(set(errors))} left unchanged after an error" if errors else "") + f"; summary in {summary_path}")
+        + (f"; {len(set(errors))} left unchanged after an error" if errors else "") + transport_note
+        + f"; summary in {summary_path}")
 
 
 def main():

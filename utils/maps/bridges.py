@@ -9,9 +9,10 @@ than `limit` reactions of the model (hubs) only when `limit` is None ("all", the
 exchange and transport reactions are not used. The bridge joining the largest parts is added first, until
 no reaction joins two parts. The subsystems in SKIP get no bridges: Isolated (isolated by definition) and
 tRNA charging (Aminoacyl-tRNA biosynthesis, Yeast-GEM's tRNA metabolism), where amino acids would join
-everything. After placement, D10 links a bridge's metabolites over longer lines than usual; a bridge still not
-joined gets the smaller of its two parts (at most MOVE_MAX reactions) moved, as a whole, next to it, and is
-removed if that does not join it either.
+everything. After placement, D10 links a bridge's metabolites over longer lines than usual; each bridge is then
+drawn between the nodes it joins (draw_bridges), moving the smaller or the larger of its two parts (at most
+MOVE_MAX reactions) as a whole next to the other when they are far apart or there is no room between them,
+and is removed if, as drawn, it does not join two parts (check_bridges).
 """
 
 import collections
@@ -150,11 +151,9 @@ def add_bridges(dr, scope, comps_on_map, limit, steps=1):
 MOVE_MAX = 25  # reactions: the largest part moved to join a bridge
 
 
-def analyse(dr):
-    """Bridge groups still drawn, parts of the other reactions (find), and each bridge reaction's neighbours."""
-    mp = dr.mp
-    groups = [g for g in getattr(dr, "bridge_groups", []) if any(r in mp.reactions() for r in g)]
-    every = {r for g in groups for r in g}
+def joins(dr, group):
+    """True if the reactions in group join, as drawn, two parts of the other drawn reactions (other bridges
+    included, so a bridge may join through a node another bridge added)."""
     parent = {}
 
     def find(k):
@@ -163,22 +162,17 @@ def analyse(dr):
             parent[k] = parent[parent[k]]
             k = parent[k]
         return k
-    neighbours = collections.defaultdict(set)
-    for n in mp.nodes("met"):
+    touching = set()
+    for n in dr.mp.nodes("met"):
         if not dr.is_main(n):
             continue
-        rids = [c for c in mp.classes(n)[2:] if L.is_rxn(c)]
-        others = [r for r in rids if r not in every]
+        rids = [c for c in dr.mp.classes(n)[2:] if L.is_rxn(c)]
+        others = [r for r in rids if r not in group]
         for r in others[1:]:
             parent[find(r)] = find(others[0])
-        for r in rids:
-            if r in every:
-                neighbours[r] |= set(others)
-    return groups, every, find, neighbours
-
-
-def joined(g, find, neighbours):
-    return len({find(r) for b in g for r in neighbours[b]}) >= 2
+        if len(others) < len(rids):
+            touching.update(others)
+    return len({find(r) for r in touching}) >= 2
 
 
 def sample(pts_list, step=40):
@@ -327,8 +321,8 @@ def move_group(dr, rids, a_node, t_node, comp, dists=(450, 600, 800, 1000, 1300,
     reg, holes = area(mp, comp)
     a, t = L.translate(a_node), L.translate(t_node)
     for dist in dists:
-        for k in range(16):
-            ang = k * math.pi / 8
+        for k in range(24):
+            ang = k * math.pi / 12
             new = (t[0] + dist * math.cos(ang), t[1] + dist * math.sin(ang))
             off = (new[0] - a[0], new[1] - a[1])
             if fits(boxes, off, grid, reg, holes):
@@ -396,9 +390,11 @@ def end_nodes(dr, via, find):
     return best
 
 
-def draw_bridge(dr, rid, ends):
-    """Draw rid in free space between the existing nodes in ends {metabolite: node}, with routed edges to them;
-    its other main metabolites get new nodes beside it. False when there is no room."""
+def draw_bridge(dr, rid, ends, why=None, crossings=None):
+    """Draw rid in free space between or beside the existing nodes in ends {metabolite: node}, with routed edges
+    to them (crossing at most `crossings` edges each, BRIDGE_CROSSINGS by default); its other main metabolites
+    get new nodes beside it. Places with the shortest edges are tried first. False when there is no room; why
+    (a Counter) then counts what was missing at the places tried."""
     import math
     import connect
     mp, model = dr.mp, dr.model
@@ -411,62 +407,79 @@ def draw_bridge(dr, rid, ends):
     inside = lambda q: (reg[0] + 60 <= q[0] <= reg[2] - 60 and reg[1] + 60 <= q[1] <= reg[3] - 60 and  # noqa: E731
                         not any(h[0] - 40 <= q[0] <= h[2] + 40 and h[1] - 40 <= q[1] <= h[3] + 40 for h in holes))
     axis = L.unit(L.sub(p2, p1)) if L.length(L.sub(p2, p1)) > 1 else (1.0, 0.0)
-    for f in (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8):
-        for off in (0, 150, -150, 300, -300, 450, -450, 650, -650, 900, -900):
-            c = L.add(L.add(p1, L.sub(p2, p1), f), L.normal(axis), off)
-            if not inside(c):
-                continue
-            if not dr.space.free((c[0] - 55, c[1] - 55, c[0] + 55, c[1] + 55), 4):
-                continue
-            routes = {}
-            for m, n, q in ((m1, n1, p1), (m2, n2, p2)):
-                pts = connect.route(dr, c, q, [(c, 140), (q, 80)], connect.BRIDGE_CROSSINGS)
-                if pts is None:
+    if crossings is None:
+        crossings = connect.BRIDGE_CROSSINGS
+    cands = [L.add(L.add(p1, L.sub(p2, p1), f), L.normal(axis), off) for f in (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8)
+             for off in (0, 150, -150, 300, -300, 450, -450, 650, -650, 900, -900)]
+    cands += [L.add(q, (math.cos(k * math.pi / 8), math.sin(k * math.pi / 8)), r)  # beside either end
+              for q in (p1, p2) for r in (250, 400, 600) for k in range(16)]
+    cands.sort(key=lambda c: round(L.length(L.sub(c, p1)) + L.length(L.sub(c, p2))))  # stable: ties keep order
+    for c in cands:
+        if not inside(c):
+            continue
+        if not dr.space.free((c[0] - 55, c[1] - 55, c[0] + 55, c[1] + 55), 4):
+            if why is not None:
+                why["no free spot"] += 1
+            continue
+        routes = {}
+        for m, n, q in ((m1, n1, p1), (m2, n2, p2)):
+            pts = connect.route(dr, c, q, [(c, 140), (q, 80)], crossings)
+            if pts is None:
+                break
+            routes[m] = list(reversed(pts))
+        if len(routes) != 2:
+            if why is not None:
+                why["no clear route"] += 1
+            continue
+        pos = {m1: p1, m2: p2}
+        extra = [m for m in mains_ if m not in pos]
+        for m in extra:  # beside the reaction, where there is room for the label
+            for k in range(16):
+                u = (math.cos(k * math.pi / 8), math.sin(k * math.pi / 8))
+                q = L.add(c, u, L.STEP * (1 if k % 2 == 0 else 1.4))
+                if inside(q) and dr.space.free((q[0] - 90, q[1] - 30, q[0] + 90, q[1] + 30), 6) and \
+                        all(L.length(L.sub(q, x)) > 120 for x in pos.values()):
+                    pos[m] = q
                     break
-                routes[m] = list(reversed(pts))
-            if len(routes) != 2:
-                continue
-            pos = {m1: p1, m2: p2}
-            extra = [m for m in mains_ if m not in pos]
-            for m in extra:  # beside the reaction, where there is room for the label
-                for k in range(8):
-                    u = (math.cos(k * math.pi / 4), math.sin(k * math.pi / 4))
-                    q = L.add(c, u, L.STEP)
-                    if inside(q) and dr.space.free((q[0] - 90, q[1] - 30, q[0] + 90, q[1] + 30), 6) and \
-                            all(L.length(L.sub(q, x)) > 120 for x in pos.values()):
-                        pos[m] = q
-                        break
-                else:
-                    break
-            if any(m not in pos for m in extra):
-                continue
-            links = []
-            for m in subs + prods:
-                if m in ends:
-                    dr.link(ends[m], rid)
-                    line = routes[m]
-                else:
-                    node = L.new_main(m, model.name(m), [rid], *pos[m])
-                    L.append(mp.layer["nodes"], node)
-                    dr.space.add(L.node_box(mp, node))
-                    line = None
-                links.append((pos[m], "main", -1 if m in subs else 1, line))
-            L.append(mp.layer["nodes"], L.new_reaction(rid, *c))
-            sp = [pos[m] for m in subs] or [c]
-            pp = [pos[m] for m in prods] or [c]
-            tangent = L.unit(L.sub(pp[0], sp[0])) if L.length(L.sub(pp[0], sp[0])) > 1 else axis
-            side = dr.choose_side(c, tangent)
-            links += dr.add_side_mets(rid, c, tangent, side, set(mains_))
-            dr.draw(rid, c, links, (-side[0], -side[1]))
-            dr.placed.add(rid)
-            return True
+            else:
+                break
+        if any(m not in pos for m in extra):
+            if why is not None:
+                why["no room for its other metabolites"] += 1
+            continue
+        links = []
+        for m in subs + prods:
+            if m in ends:
+                dr.link(ends[m], rid)
+                line = routes[m]
+            else:
+                node = L.new_main(m, model.name(m), [rid], *pos[m])
+                L.append(mp.layer["nodes"], node)
+                dr.space.add(L.node_box(mp, node))
+                line = None
+            links.append((pos[m], "main", -1 if m in subs else 1, line))
+        L.append(mp.layer["nodes"], L.new_reaction(rid, *c))
+        sp = [pos[m] for m in subs] or [c]
+        pp = [pos[m] for m in prods] or [c]
+        tangent = L.unit(L.sub(pp[0], sp[0])) if L.length(L.sub(pp[0], sp[0])) > 1 else axis
+        side = dr.choose_side(c, tangent)
+        links += dr.add_side_mets(rid, c, tangent, side, set(mains_))
+        dr.draw(rid, c, links, (-side[0], -side[1]))
+        dr.placed.add(rid)
+        return True
     return False
+
+
+LONG_BRIDGE = 3000     # px: the furthest apart two parts may be for a bridge drawn without moving either
+LONG_CROSSINGS = 3     # edges each line of such a bridge may cross
 
 
 def draw_bridges(dr, near=1500):
     """D14 after placement and D10: each one-step bridge is drawn between the nodes it joins. When they are
-    more than `near` px apart, or there is no room between them, the smaller of the two parts (at most MOVE_MAX
-    reactions) is moved as a whole next to the other first. A bridge that cannot be drawn is dropped."""
+    more than `near` px apart, or there is no room between them, the smaller of the two parts, else the larger
+    (at most MOVE_MAX reactions), is moved as a whole next to the other first. When neither can move, a bridge
+    whose parts are at most LONG_BRIDGE px apart is drawn where they are, over lines that cross at most
+    LONG_CROSSINGS edges each. A bridge that cannot be drawn is dropped, with the reason."""
     mp, model, log = dr.mp, dr.model, dr.log
     for rid, via in sorted(getattr(dr, "bridge_via", {}).items()):
         find, members = part_index(dr)
@@ -476,26 +489,42 @@ def draw_bridges(dr, near=1500):
             dr.context.discard(rid)
             continue
         d, (ma, na, pa), (mb, nb, pb) = pair
-        done = d <= near and draw_bridge(dr, rid, {ma: na, mb: nb})
+        ends = {ma: na, mb: nb}
+        why = collections.Counter()
+        done = d <= near and draw_bridge(dr, rid, ends, why)
+        sizes = sorted((len(members[pa]), len(members[pb])))
+        moves = 0
+        parts = sorted(((pa, na, nb, ma), (pb, nb, na, mb)), key=lambda x: len(members[x[0]]))  # smaller first
+        for root, a_node, t_node, m in parts:
+            if done or len(members[root]) > MOVE_MAX:
+                continue
+            comp = dr.one_area or L.COMPARTMENT.get(comp_of(m), comp_of(m))
+            for dist, (nodes, paths, band, off) in move_group(dr, members[root], a_node, t_node, comp):
+                moves += 1
+                done = draw_bridge(dr, rid, ends, why)
+                if done:
+                    # D6 may close the space the part left in its box
+                    for g, b in compact_boxes(mp):
+                        if any(b[0] <= L.translate(n)[0] <= b[2] and b[1] <= L.translate(n)[1] <= b[3]
+                               for n in nodes[:1] if L.translate(n)):
+                            g.set("data-grown", "1")
+                    log.append(("D14", "part moved to join a bridge", rid,
+                                f"{len(members[root])} reaction(s), {dist} px from the other copy", model.name(m)))
+                    break  # kept here; otherwise move_group puts it back and tries the next place
+        if not done and near < d <= LONG_BRIDGE:
+            done = draw_bridge(dr, rid, ends, why, LONG_CROSSINGS)
+            if done:
+                log.append(("D14", "bridge drawn over long lines", rid, f"{d:.0f} px between the parts", ""))
         if not done:
-            small, big = ((pa, na, nb, ma), (pb,)) if len(members[pa]) <= len(members[pb]) else ((pb, nb, na, mb), (pa,))
-            root, a_node, t_node, m = small
-            if len(members[root]) <= MOVE_MAX:
-                comp = dr.one_area or L.COMPARTMENT.get(comp_of(m), comp_of(m))
-                for dist, (nodes, paths, band, off) in move_group(dr, members[root], a_node, t_node, comp):
-                    done = draw_bridge(dr, rid, {ma: na, mb: nb})
-                    if done:
-                        # D6 may close the space the part left in its box
-                        for g, b in compact_boxes(mp):
-                            if any(b[0] <= L.translate(n)[0] <= b[2] and b[1] <= L.translate(n)[1] <= b[3]
-                                   for n in nodes[:1] if L.translate(n)):
-                                g.set("data-grown", "1")
-                        log.append(("D14", "part moved to join a bridge", rid,
-                                    f"{len(members[root])} reaction(s), {dist} px from the other copy", model.name(m)))
-                        break  # kept here; otherwise move_group puts it back and tries the next place
-        if not done:
-            log.append(("D14", "bridge dropped: no room to draw it", rid, f"{d:.0f} px between the parts",
-                        ", ".join(model.name(x) for x in via)))
+            if sizes[0] > MOVE_MAX and d > LONG_BRIDGE:
+                reason = "parts too large to move and too far apart"
+            elif not moves and d > LONG_BRIDGE:
+                reason = "no free place to move either part, and too far apart"
+            else:
+                reason = ", ".join(f"{k} ({v})" for k, v in why.most_common()) or "no free place to move either part"
+            log.append(("D14", "bridge dropped: no room to draw it", rid,
+                        f"{d:.0f} px between parts of {sizes[0]} and {sizes[1]} reactions; {reason}; "
+                        f"{moves} place(s) tried for a part", ", ".join(model.name(x) for x in via)))
             dr.context.discard(rid)
             continue
         log.append(("D14", "context reaction drawn", rid, "between " + model.name(ma) + " and " + model.name(mb),
@@ -503,12 +532,11 @@ def draw_bridges(dr, near=1500):
 
 
 def check_bridges(dr):
-    """After placement and D10: a bridge stays only if, as drawn, it joins two parts that are not joined without
-    the bridges; otherwise it is removed again."""
+    """After placement, D10 and drawing: a bridge stays only if, as drawn, it joins two parts that are not
+    joined without it; otherwise it is removed again (in the order they were added)."""
     mp, log = dr.mp, dr.log
-    groups, every, find, neighbours = analyse(dr)
-    for g in groups:
-        if joined(g, find, neighbours):
+    for g in [g for g in getattr(dr, "bridge_groups", []) if any(r in mp.reactions() for r in g)]:
+        if joins(dr, set(g)):
             continue
         for r in g:
             if r in mp.reactions():
