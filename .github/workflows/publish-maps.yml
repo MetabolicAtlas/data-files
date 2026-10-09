@@ -1,0 +1,171 @@
+# Publishes the maps of a model to its maps repository, after they change here.
+#
+# Metabolic Atlas serves the SVG maps in svg/<Model>. The repositories SysBioChalmers/Human-maps and
+# SysBioChalmers/Yeast-maps hold the same maps as SVG, SBGN-ML, SBML (with layout) and Escher (JSON). When a push
+# to the default branch changes a model's maps or model files (a merged model update), this workflow
+# writes the maps in those formats with maps/publish_maps.py of MetabolicAtlas/data-generation (this
+# repository holds data only) into a checkout of the maps
+# repository, pushes branch auto/maps-<model>-<version> and opens (or updates) a pull request there.
+#
+# Triggers: a push to the default branch that changes svg/<Model> or integrated-models/<Model>, for
+# the models listed in REPOS below; or manually (Actions tab, Run workflow) for one model.
+#
+# Needs the secret MAPS_REPOS_TOKEN: a token with contents and pull-request write access to the
+# maps repositories (they are in another organisation, so the workflow's own token cannot push there).
+
+name: Publish maps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "svg/Human-GEM/**"
+      - "svg/Yeast-GEM/**"
+      - "integrated-models/Human-GEM/**"
+      - "integrated-models/Yeast-GEM/**"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model whose maps to publish"
+        required: true
+        type: choice
+        options: [Human-GEM, Yeast-GEM]
+      data_generation_ref:
+        description: "data-generation branch or tag whose maps/publish_maps.py to use"
+        required: false
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-maps
+  cancel-in-progress: false
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      models: ${{ steps.models.outputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Models whose maps or model files changed
+        id: models
+        env:
+          INPUT_MODEL: ${{ inputs.model }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ -n "$INPUT_MODEL" ]; then
+            models=("$INPUT_MODEL")
+          else
+            models=()
+            for m in Human-GEM Yeast-GEM; do
+              if git diff --quiet "$BEFORE" "$AFTER" -- "svg/$m" "integrated-models/$m" 2>/dev/null; then
+                continue
+              fi
+              models+=("$m")
+            done
+          fi
+          json=$(printf '%s\n' "${models[@]}" | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+          echo "models=$json" >> "$GITHUB_OUTPUT"
+          echo "Models: $json"
+
+  publish:
+    needs: select
+    if: needs.select.outputs.models != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJSON(needs.select.outputs.models) }}
+    env:
+      MODEL: ${{ matrix.model }}
+      REPO: ${{ matrix.model == 'Human-GEM' && 'SysBioChalmers/Human-maps' || 'SysBioChalmers/Yeast-maps' }}
+      GH_TOKEN: ${{ secrets.MAPS_REPOS_TOKEN }}
+      DATA_GENERATION_REF: ${{ inputs.data_generation_ref || 'main' }}
+    steps:
+      - name: Check the token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::The secret MAPS_REPOS_TOKEN is not set (see the comment at the top of this workflow)."
+            exit 1
+          fi
+
+      - name: Check out data-files
+        uses: actions/checkout@v4
+        with:
+          path: data-files
+
+      - name: Fetch the model's SVG maps from Git LFS
+        working-directory: data-files
+        run: git lfs pull --include "svg/$MODEL/*"
+
+      - name: Check out data-generation (the export scripts)
+        uses: actions/checkout@v4
+        with:
+          repository: MetabolicAtlas/data-generation
+          ref: ${{ env.DATA_GENERATION_REF }}
+          path: data-generation
+
+      - name: Check out the maps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.REPO }}
+          token: ${{ secrets.MAPS_REPOS_TOKEN }}
+          path: maps-repo
+          fetch-depth: 0  # LFS files are not needed: the map folders are written anew
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the export dependencies
+        run: |
+          pip install pyyaml lxml python-libsbml jsonschema
+          # the libsbgn and Escher schemas, to validate every SBGN-ML file and Escher map
+          mkdir -p data-generation/maps/schema
+          curl -sfL -o data-generation/maps/schema/SBGN.xsd \
+            https://raw.githubusercontent.com/sbgn/libsbgn/master/resources/SBGN.xsd
+          curl -sfL -o data-generation/maps/schema/escher_1-0-0.json \
+            https://escher.github.io/escher/jsonschema/1-0-0
+
+      - name: Write the maps into the maps repository
+        id: publish
+        run: |
+          version=$(python -c "import json; print(next(e['version'] for e in json.load(open('data-files/integrated-models/integratedModels.json')) if e['short_name'] == '$MODEL'))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          python data-generation/maps/publish_maps.py --model "$MODEL" --repo maps-repo --data-files data-files --summary summary.md
+          git -C maps-repo add -A
+          if git -C maps-repo diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The maps repository is up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push and open or update the pull request
+        if: steps.publish.outputs.changed == 'true'
+        working-directory: maps-repo
+        env:
+          VERSION: ${{ steps.publish.outputs.version }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        run: |
+          base=$(gh api "repos/$REPO" --jq .default_branch)
+          branch="auto/maps-$(echo "$MODEL" | tr '[:upper:]' '[:lower:]')-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git commit -q -m "feat: maps for $MODEL $VERSION" -m "Written by maps/publish_maps.py of MetabolicAtlas/data-generation ($DATA_GENERATION_REF) from $SOURCE"
+          git push --force origin "$branch"
+          printf '%s\n\nSource: %s\n' "$(cat ../summary.md)" "$SOURCE" > ../body.md
+          number=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh pr create --repo "$REPO" --base "$base" --head "$branch" --title "feat: maps for $MODEL $VERSION" --body-file ../body.md
+          else
+            gh pr edit "$number" --repo "$REPO" --body-file ../body.md
+          fi

@@ -1,0 +1,256 @@
+# Prepares the update of an integrated model to a new release and opens a pull request.
+#
+# The workflow runs update/update_model.py of MetabolicAtlas/data-generation (see UPDATING_MODELS.md;
+# this repository holds data only): it downloads the
+# release files, prepares them for data-generation, updates integratedModels.json and
+# the release timeline, runs data-generation and checks the generated data. The result
+# is pushed to a branch and a pull request is opened, with the check summary and the
+# steps to test the update in a local deployment, which needs Docker and stays manual.
+#
+# Triggers:
+#   * daily: updates Human-GEM to its latest release, if that is newer than the integrated one
+#     (Metabolic Atlas serves one version per model, so intermediate releases are skipped);
+#   * manually (Actions tab, Run workflow): any model and version, or check an
+#     update branch again after fixing its files by hand (continue_branch);
+#   * repository_dispatch "model-release" with client_payload {"model", "version"},
+#     which a model repository's release workflow can send (needs a token with
+#     access to this repository).
+#
+# Nothing is done when the model is up to date, or when a branch for the same model and
+# version exists already (also one made by hand). A pull request that needs a manual fix
+# is opened as a draft, and the run fails so it shows up in the Actions tab.
+
+name: Update integrated model
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model: folder in integrated-models and repository in SysBioChalmers"
+        required: true
+        default: Human-GEM
+      version:
+        description: "Release to update to (empty: the latest release)"
+        required: false
+        default: ""
+      continue_branch:
+        description: "Update branch to check again after manual fixes (keeps its files)"
+        required: false
+        default: ""
+      data_generation_ref:
+        description: "data-generation branch or tag to use"
+        required: false
+        default: main
+  repository_dispatch:
+    types: [model-release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  MODEL: ${{ inputs.model || github.event.client_payload.model || 'Human-GEM' }}
+  REQUESTED_VERSION: ${{ inputs.version || github.event.client_payload.version || '' }}
+  CONTINUE_BRANCH: ${{ inputs.continue_branch || '' }}
+  DATA_GENERATION_REF: ${{ inputs.data_generation_ref || 'main' }}
+  BASE: ${{ github.event.repository.default_branch }}
+  GH_TOKEN: ${{ github.token }}
+
+concurrency:
+  group: update-model-${{ inputs.model || github.event.client_payload.model || 'Human-GEM' }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out data-files
+        uses: actions/checkout@v4
+        with:
+          path: data-files
+          ref: ${{ inputs.continue_branch || github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install pyyaml PyGithub packaging lxml
+
+      - name: Check out data-generation (the generator and the update scripts)
+        uses: actions/checkout@v4
+        with:
+          repository: MetabolicAtlas/data-generation
+          ref: ${{ env.DATA_GENERATION_REF }}
+          path: data-generation
+
+      - name: Decide the version and branch
+        id: target
+        working-directory: data-files
+        run: |
+          version="$REQUESTED_VERSION"
+          if [ -z "$version" ] && [ -n "$CONTINUE_BRANCH" ]; then
+            version="${CONTINUE_BRANCH##*-}"
+          fi
+          if [ -z "$version" ]; then
+            version=$(python ../data-generation/update/update_model.py --data-files . --model "$MODEL" --latest-version)
+          fi
+          if [ -z "$version" ]; then
+            echo "$MODEL is up to date."
+            exit 0
+          fi
+          slug=$(echo "$MODEL" | tr '[:upper:]' '[:lower:]')
+          branch="$CONTINUE_BRANCH"
+          if [ -z "$branch" ]; then
+            branch="auto/update-$slug-$version"
+            existing=$(git ls-remote --heads origin | awk '{print $2}' | grep -iE "update-$slug-${version//./\\.}$" || true)
+            if [ -n "$existing" ]; then
+              echo "A branch for $MODEL $version exists already ($existing)."
+              echo "Run the workflow with continue_branch to check it again."
+              exit 0
+            fi
+          fi
+          echo "Updating $MODEL to $version on $branch"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the integrated version, for the baseline
+        if: steps.target.outputs.version != ''
+        uses: actions/checkout@v4
+        with:
+          path: baseline
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: integrated-models
+
+      - name: Pull this model's SVG maps from Git LFS
+        if: steps.target.outputs.version != ''
+        working-directory: data-files
+        run: git lfs pull --include "svg/$MODEL/*"
+
+      - name: Check out the MetabolicAtlas tests (to list identifiers they use)
+        if: steps.target.outputs.version != ''
+        uses: actions/checkout@v4
+        with:
+          repository: MetabolicAtlas/MetabolicAtlas
+          path: MetabolicAtlas
+          sparse-checkout: |
+            api/test
+            frontend/cypress/e2e
+            frontend/src
+
+      - name: Set up Node.js
+        if: steps.target.outputs.version != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install data-generation
+        if: steps.target.outputs.version != ''
+        working-directory: data-generation
+        run: yarn install --frozen-lockfile
+
+      - name: Update and check
+        id: update
+        if: steps.target.outputs.version != ''
+        working-directory: data-files
+        env:
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          args=(--data-files . --model "$MODEL" --version "$VERSION" --baseline-data-files ../baseline
+                --work-dir ../work)
+          if [ -n "$CONTINUE_BRANCH" ]; then
+            args+=(--keep-files)
+          fi
+          set +e
+          python ../data-generation/update/update_model.py "${args[@]}" 2>&1 | tee ../update.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "Exit status: $status"
+
+      - name: Commit to the update branch
+        if: steps.target.outputs.version != '' && steps.update.outputs.status != ''
+        working-directory: data-files
+        env:
+          VERSION: ${{ steps.target.outputs.version }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          STATUS: ${{ steps.update.outputs.status }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add "integrated-models/$MODEL"/*.yml "integrated-models/$MODEL"/*.tsv
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update $MODEL to $VERSION" \
+              -m "Release files prepared by update/update_model.py of MetabolicAtlas/data-generation ($DATA_GENERATION_REF; exit status $STATUS)."
+          fi
+          git add integrated-models/integratedModels.json "integrated-models/$MODEL/gemRepository.json"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update aggregated index of model versions"
+          fi
+          git add "svg/$MODEL"
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: fit the $MODEL maps to $VERSION" \
+              -m "Maps edited by maps/mapedit.py of MetabolicAtlas/data-generation (rules in maps/RULES.md there)."
+          fi
+          git push origin "$BRANCH"
+
+      - name: Open or update the pull request
+        if: steps.target.outputs.version != '' && steps.update.outputs.status != ''
+        env:
+          VERSION: ${{ steps.target.outputs.version }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          STATUS: ${{ steps.update.outputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python data-generation/update/update_pr_body.py --model "$MODEL" --version "$VERSION" --status "$STATUS" \
+            --log update.log --report "work/$MODEL-$VERSION/check_report.md" \
+            --maps-summary "work/$MODEL-$VERSION-maps/maps_summary.md" --branch "$BRANCH" --base "$BASE" \
+            --data-generation-ref "$DATA_GENERATION_REF" --run-url "$RUN_URL" > body.md
+          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            draft=()
+            if [ "$STATUS" != "0" ]; then
+              draft=(--draft)
+            fi
+            gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE" --head "$BRANCH" \
+              --title "chore: update $MODEL to $VERSION" --body-file body.md "${draft[@]}"
+          else
+            gh pr edit "$number" --repo "$GITHUB_REPOSITORY" --body-file body.md
+            if [ "$STATUS" = "0" ]; then
+              gh pr ready "$number" --repo "$GITHUB_REPOSITORY" || true
+            fi
+          fi
+
+      - name: Keep the reports
+        if: always() && steps.target.outputs.version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-update-report
+          path: |
+            update.log
+            work/*/check_report.md
+            work/*/generate.log
+            work/*-maps/maps_summary.md
+            work/*-maps/edited/changes.tsv
+          if-no-files-found: ignore
+
+      - name: Keep the map review copies
+        if: always() && steps.target.outputs.version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: map-review
+          path: work/*-maps/edited/*.review.svg
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Fail when the update needs attention
+        if: steps.update.outputs.status != '' && steps.update.outputs.status != '0'
+        run: |
+          echo "update_model.py ended with status ${{ steps.update.outputs.status }}; see the pull request."
+          exit 1

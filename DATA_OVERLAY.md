@@ -54,7 +54,7 @@ U = UQ + 1.5*IQR
 ```
 where `UQ` stands for Upper Quartile and `IQR` stands for InterQuartile Range.
 
-As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1.
+As shown by the figure below, the histogram of scaled data is more evenly distributed in the range of 0-1. The script `overlay/format_hpaRna.py` in [data-generation](https://github.com/MetabolicAtlas/data-generation) does this scaling for the HPA file, and `overlay/hpaRna-tissue-data-analysis.ipynb` there draws these histograms.
 
 ![Histogram of HPA scaled data](./assets/img/hpaRNA-TPM-scaleddata-histogram.png)
 
