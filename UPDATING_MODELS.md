@@ -241,7 +241,7 @@ When the deployment works, push the branch and open a pull request with the repo
 
 ## Part 3: publish the maps
 
-The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups), Escher maps (JSON) and PNG. Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `maps/publish_maps.py` of data-generation, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it (the PNG images show the maps) and merge it.
+The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups) and Escher maps (JSON). Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `maps/publish_maps.py` of data-generation, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it and merge it.
 
 The workflow needs the repository secret `MAPS_REPOS_TOKEN`, because the maps repositories belong to another organisation and the workflow's own token cannot write to them. It can also be started by hand from the Actions tab, for one model (and a `data_generation_ref`).
 

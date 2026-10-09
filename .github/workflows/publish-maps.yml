@@ -1,7 +1,7 @@
 # Publishes the maps of a model to its maps repository, after they change here.
 #
 # Metabolic Atlas serves the SVG maps in svg/<Model>. The repositories SysBioChalmers/Human-maps and
-# SysBioChalmers/Yeast-maps hold the same maps as SVG, SBGN-ML, SBML (with layout), Escher (JSON) and PNG. When a push
+# SysBioChalmers/Yeast-maps hold the same maps as SVG, SBGN-ML, SBML (with layout) and Escher (JSON). When a push
 # to the default branch changes a model's maps or model files (a merged model update), this workflow
 # writes the maps in those formats with maps/publish_maps.py of MetabolicAtlas/data-generation (this
 # repository holds data only) into a checkout of the maps
@@ -126,8 +126,7 @@ jobs:
 
       - name: Install the export dependencies
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q libcairo2
-          pip install pyyaml lxml python-libsbml cairosvg pillow jsonschema
+          pip install pyyaml lxml python-libsbml jsonschema
           # the libsbgn and Escher schemas, to validate every SBGN-ML file and Escher map
           mkdir -p data-generation/maps/schema
           curl -sfL -o data-generation/maps/schema/SBGN.xsd \
