@@ -1,4 +1,20 @@
-# The compartment name must exist in the model
-# The filename must have the extension `.svg` and be named with only [a-zA-Z0-9_] characters.
-# At moment there is no compartment SVG map for this model, however, it might be added with future model updates
 @compartment name	Map name	filename
+cytoplasm	Cytoplasm 1	compartment_cytoplasm_1.svg
+cytoplasm	Cytoplasm 2	compartment_cytoplasm_2.svg
+cytoplasm	Cytoplasm 3	compartment_cytoplasm_3.svg
+cytoplasm	Cytoplasm 4	compartment_cytoplasm_4.svg
+cell envelope	Cell envelope	compartment_cell_envelope.svg
+extracellular	Extracellular	compartment_extracellular.svg
+endoplasmic reticulum	Endoplasmic reticulum	compartment_endoplasmic_reticulum.svg
+endoplasmic reticulum membrane	Endoplasmic reticulum membrane 1	compartment_endoplasmic_reticulum_membrane_1.svg
+endoplasmic reticulum membrane	Endoplasmic reticulum membrane 2	compartment_endoplasmic_reticulum_membrane_2.svg
+Golgi	Golgi	compartment_golgi.svg
+Golgi membrane	Golgi membrane	compartment_golgi_membrane.svg
+lipid particle	Lipid particle	compartment_lipid_particle.svg
+mitochondrion	Mitochondrion 1	compartment_mitochondrion_1.svg
+mitochondrion	Mitochondrion 2	compartment_mitochondrion_2.svg
+mitochondrial membrane	Mitochondrial membrane	compartment_mitochondrial_membrane.svg
+nucleus	Nucleus	compartment_nucleus.svg
+peroxisome	Peroxisome	compartment_peroxisome.svg
+vacuole	Vacuole	compartment_vacuole.svg
+vacuolar membrane	Vacuolar membrane	compartment_vacuolar_membrane.svg
