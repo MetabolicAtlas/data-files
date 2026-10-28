@@ -241,7 +241,7 @@ When the deployment works, push the branch and open a pull request with the repo
 
 ## Part 3: publish the maps
 
-The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML, SBML (with layout and groups) and Escher maps (JSON). Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `maps/publish_maps.py` of data-generation, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it and merge it.
+The repositories [SysBioChalmers/Human-maps](https://github.com/SysBioChalmers/Human-maps) and [SysBioChalmers/Yeast-maps](https://github.com/SysBioChalmers/Yeast-maps) hold the maps of `svg/<Model>` as SVG, SBGN-ML and Escher maps (JSON). Once an update is merged, the workflow `.github/workflows/publish-maps.yml` writes the maps in those formats with `maps/publish_maps.py` of data-generation, pushes branch `auto/maps-<model>-<version>` to the maps repository and opens a pull request there. Review it and merge it.
 
 The workflow needs the repository secret `MAPS_REPOS_TOKEN`, because the maps repositories belong to another organisation and the workflow's own token cannot write to them. It can also be started by hand from the Actions tab, for one model (and a `data_generation_ref`).
 
@@ -256,7 +256,7 @@ The workflow needs the repository secret `MAPS_REPOS_TOKEN`, because the maps re
 3. **Test it:** Actions, *Publish maps*, *Run workflow*, for Human-GEM. It should open a pull request in SysBioChalmers/Human-maps (or report that the maps repository is up to date). Workflows run only from the default branch, so this works once the workflow is on `main`.
 4. **Renew it** before it expires: make a new token the same way and replace the secret's value.
 
-To publish by hand, in the folder that holds data-files and data-generation, with python-libsbml, lxml, cairosvg, Pillow and jsonschema installed:
+To publish by hand, in the folder that holds data-files and data-generation, with lxml, cairosvg, Pillow and jsonschema installed:
 
 ```bash
 git clone https://github.com/SysBioChalmers/Human-maps
